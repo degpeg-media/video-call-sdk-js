@@ -1,0 +1,48 @@
+<div class="degpeg-onetoone-card" id="degpegLeadCard">
+  <div class="degpeg-onetoone-banner">
+    <img
+      src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/welcome.gif"
+    />
+    <h4 style="--primary-bg-color: #dfa243" id="sdk-title">
+      Welcome to Degpeg
+    </h4>
+  </div>
+  <form>
+    <h5>Introduce Lead</h5>
+    <div class="degpeg-onetoone-formgroup fieldSeperator">
+      <input id="leadName" name="leadName" placeholder="Name" />
+    </div>
+    <div class="degpeg-onetoone-formgroup fieldSeperator">
+      <input id="leadEmail" name="leadEmail" placeholder="Email" />
+    </div>
+    <div
+      class="degpeg-onetoone-formgroup fieldSeperator"
+      id="degpeg-onetoone-phone"
+    >
+      <input
+        type="tel"
+        id="leadPhone"
+        class="phone-input"
+        placeholder="81234 56789"
+      />
+    </div>
+    <div class="degpeg-onetoone-formgroup">
+      <input
+        id="leadLocationInput"
+        name="leadLocationInput"
+        placeholder="Location"
+      />
+    </div>
+    <button
+      id="submit-lead-btn"
+      type="button"
+      name="confirm-button"
+      class="degpegbtn btn-primary"
+      onclick="submitUserData()"
+      style="margin-top: 10px !important"
+    >
+      <span>Confirm</span>
+    </button>
+  </form>
+</div>
+<div id="toast" class="toast">Please fill in all fields</div>

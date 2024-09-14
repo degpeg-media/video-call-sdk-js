@@ -1,0 +1,117 @@
+<div class="degpegVideoCallConnected" id="callConnected">
+  <div class="degpegVideoCallVideoWrapper" id="videoWrapper">
+    <div id="host-video" class="degpegVideoCallVideoHost movable"></div>
+    <div class="oneToOneDegpegMultiCall fullwidth">
+      <div
+        id="video-tiles"
+        class="degpegVideoCalls"
+        onload="getAllVideos()"
+      ></div>
+      <div class="degpegVideoCallCard" id="connectingCallCard" style="opacity: 75%; display: none;">
+        <div class="degpegVideoCallCardWaiting connectingCall">
+          <video autoplay="" playsinline=""></video>
+          <div class="degpeg-connectLoader">
+            <div class="loader-ripple">
+              <div></div>
+              <div></div>
+            </div>
+            <span>Connecting to our Expert</span>
+            <p>
+              Please wait... <br />
+              We are waiting for expert to join this call. <br /><br />
+              This usually takes less than 2 minutes.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="degpegVideoCallActionBtn">
+      <button
+        onclick="dropMeeting()"
+        class="degpegVideoCallActionHangBtn hangup"
+      >
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/hangup.svg"
+        /></button
+      ><button onclick="toggleAudio()" class="degpegVideoCallActionMikeBtn">
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/unmute.svg"
+        /></button
+      ><button onclick="switchCamera()" class="degpegVideoCallActionSwitchBtn">
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/camera-back.svg"
+        /></button
+      ><button class="degpegMoreOption" onclick="toggleMoreOption()">
+        <span></span>
+      </button>
+    </div>
+    <div id="more-options" class="degpegMoreOptionWrapper">
+      <button onclick="toggleVideoStatus()">
+        <img
+          alt="toggle video"
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/videoon.svg"
+        /><span>Video On/Off</span></button
+      ><button onclick="toggleExpand()">
+        <img
+          id="toggle-expand-img"
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/maximize.svg"
+        /><span>Expand</span></button
+      ><button
+        onclick="clickSnapshot()"
+        class="degpegVideoCallActionPhotoBtn"
+        id="snapshot-btn"
+      >
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/photo-click.svg"
+        /><span>Snapshot</span></button
+      ><button onclick="toggleUpload()">
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/photo-click.svg"
+        /><span>Upload</span></button
+      ><button onclick="startScreenRecording()" id="start-recording">
+        <img
+          id="recording-btn"
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/recording.svg"
+        /><span>Recording</span>
+      </button>
+      <button
+        onclick="stopScreenRecording()"
+        id="stop-recording"
+        style="display: none"
+      >
+        <img
+          id="recording-btn"
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/recording-end.svg"
+        /><span>Recording</span>
+      </button>
+      <span class="degpegMoreClose" onclick="toggleMoreOption()">Close</span
+      ><button id="start-screenshare" onclick="onShareScreen()">
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/sharescreen.svg"
+        /><span>ShareScreen</span>
+      </button>
+      <button
+        id="stop-screenshare"
+        style="display: none"
+        onclick="offShareScreen()"
+      >
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/sharescreen.svg"
+        /><span>Stop ShareScreen</span></button
+      ><button onclick="toggleChat()" id="chat-feature">
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/chat.svg"
+        /><span>Chat</span><span class="notify"></span>
+      </button>
+    </div>
+    <div class="degpeg-network-btn" id="degpegNetworkBtn" style="color: green">
+      10 mb/s
+    </div>
+    <div class="degpeg-record-notify-btn bottom" style="display: none">
+      <span></span>Rec Start
+    </div>
+    <div class="degpeg-record-notify-btn" style="display: flex">
+      <span></span>Recording
+    </div>
+  </div>
+</div>
