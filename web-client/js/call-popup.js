@@ -7,8 +7,8 @@ let isIntervalActive = true;
 let meetingDropped = false;
 
 let apiUrl = "https://dev.db.degpeg.com/";
-let imgAssetUrl = "img";
-let htmlAssetUrl = "html";
+let imgAssetUrl = "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/js/img";
+let htmlAssetUrl = "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/js/html";
 
 document.addEventListener("DOMContentLoaded", () => {
   socket = io("https://dev.backend.degpeg.com", {
