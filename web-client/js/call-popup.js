@@ -813,11 +813,6 @@ function getAllVideos(videoTilesParent) {
 
           if (connectingCallCard) connectingCallCard.style.display = "block";
           if (videoHostDiv) videoHostDiv.style.display = "none";
-
-          const videoCallWaitingTimeInSeconds = callSettingsData.videoCallWaitingTime;
-          // const timerDuration = videoCallWaitingTimeInSeconds * 1000;
-          const timerDuration = 120000;
-          const timerId = setTimeout(onTimerComplete, timerDuration);
         }
 
         if (numberOfVideos >= 2) {
@@ -833,8 +828,6 @@ function getAllVideos(videoTilesParent) {
 
           if (connectingCallCard) connectingCallCard.style.display = "none";
           if (videoHostDiv) videoHostDiv.style.display = "";
-
-          clearTimeout(timerId);
         }
 
         for (let i = 1; i < numberOfVideos; i++) {
@@ -950,28 +943,6 @@ async function addInputFields(
 
 function toggleVideoStatus() {
   toggleVideo();
-}
-
-async function onTimerComplete() {
-  localStorage.setItem("executive-status", "busy");
-  console.log('Execurtives Busy');
-
-  try {
-    const response = await fetch(htmlAssetUrl+"/busyExecutives.html");
-    const assistCardHtml = await response.text();
-
-    const targetDiv = document.querySelector("#callConnected");
-    if (targetDiv) {
-      targetDiv.insertAdjacentHTML("afterend", assistCardHtml);
-      targetDiv.style.display = "none";
-    } else {
-      console.error("Target div not found to insert assist card");
-    }
-  } catch (error) {
-    console.error("Error fetching the full assist card HTML:", error);
-  }
-
-  dropMeeting();
 }
 
 const startDivCheckInterval = () => {
