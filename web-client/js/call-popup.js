@@ -6,12 +6,12 @@ let intervalId;
 let isIntervalActive = true;
 let meetingDropped = false;
 
-let apiUrl = "http://3.109.121.40:3100/";
-let imgAssetUrl = "https://testclient.gosotek.com/web/img";
-let htmlAssetUrl = "https://testclient.gosotek.com/web/html";
+let apiUrl = "https://dev.db.degpeg.com/";
+let imgAssetUrl = "img";
+let htmlAssetUrl = "html";
 
 document.addEventListener("DOMContentLoaded", () => {
-  socket = io("http://3.109.121.40:4000", {
+  socket = io("https://dev.backend.degpeg.com", {
     query: {
       contentProviderId: contentProviderId,
     },
