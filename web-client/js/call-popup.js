@@ -8,18 +8,15 @@ let meetingDropped = false;
 let callWaitingTimerId;
 let authToken;
 
-let dbApiUrl =
-  "https://ea3a-2402-e280-3e19-28f-80e-384b-3137-9c7e.ngrok-free.app";
 let sdkApirUrl =
-  "https://0c0d-2402-e280-3e19-28f-80e-384b-3137-9c7e.ngrok-free.app";
-let imgAssetUrl =
-  "https://bce5-2409-40c2-1002-e28b-3408-b0cd-36c4-9c1d.ngrok-free.app/gosotek/degpeg-dashboard/web-client/img";
-let htmlAssetUrl =
-  "https://bce5-2409-40c2-1002-e28b-3408-b0cd-36c4-9c1d.ngrok-free.app/gosotek/degpeg-dashboard/web-client/html";
+  "https://dev.sdk.degpeg.com/";
+let dbApiUrl = "https://dev.db.degpeg.com/";
+let imgAssetUrl = "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/img";
+let htmlAssetUrl = "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/html";
 
 document.addEventListener("DOMContentLoaded", () => {
   socket = io(
-    "https://0e37-2402-e280-3e19-28f-80e-384b-3137-9c7e.ngrok-free.app",
+    "https://dev.backend.degpeg.com",
     {
       query: {
         contentProviderId: contentProviderId,
