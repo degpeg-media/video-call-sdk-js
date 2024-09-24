@@ -3,17 +3,427 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <script src="https://8945-58-84-61-47.ngrok-free.app/streaming-sdk"></script>
-    <script src="https://66e4-58-84-61-47.ngrok-free.app/socket.io/socket.io.js"></script>
-    <script>
-      var contentProviderId = "66dcaa56a804183cc3d32fc7";
-    </script>
-    <script src="js/call-popup.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://bce5-2409-40c2-1002-e28b-3408-b0cd-36c4-9c1d.ngrok-free.app/gosotek/degpeg-dashboard/web-client/css/call-popup.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.9/dist/ffmpeg.min.js"></script>
     <title>Call Layout</title>
   </head>
   <body>
-    <audio style="display: none" id="meeting-audio"></audio>
-    <!-- <p id="download-link"></p> -->
-    <a id="download-link" style="display:none">Download Recording</a>
+    <button value="Start Recording" onclick="startRecording()">Start</button>
+    <button value="Stop Recording" onclick="stopRecording()">Stop</button>
+    <div id="degpeg-widget" class="degpeg-onetoone-container box movable">
+      <div class="degpeg-onetoone-header" id="header">
+        <img
+          id="header-img"
+          src="https://d3ur2dp0uh3ite.cloudfront.net/session-banners/2022-11-15T10%3A05%3A10.886Z_636e77617bf7ac54990dc015_logo.svg"
+        />
+        <div class="degpeg-onetoone-closebtn" onclick="removeModal()"></div>
+      </div>
+      <div class="degpegVideoCallCard" id="degpegVideoCallCard">
+        <div
+          class="degpegVideoCallCardWaiting"
+          id="videoCallWaitingCard"
+          style="display: none"
+        >
+          <img
+            src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/calling.gif"
+          /><span>Join the video call</span>
+          <p>
+            We need your camera, microphone permissions before we connect you.
+          </p>
+          <ul class="degpegVideoCallCardProgress">
+            <li class="active">Personal Details</li>
+            <li>Microphone</li>
+            <li>Camera</li>
+            <li>Location</li>
+          </ul>
+          <button class="degpegbtn btn-primary">
+            Waiting for Microphone-Camera &amp; Location Permissions
+          </button>
+          <div>
+            * You can turn off your video or mute yourself at any point during
+            this call.
+          </div>
+        </div>
+        <div
+          class="degpegVideoCallConnected"
+          id="callConnected"
+          style="display: none"
+        >
+          <div class="degpegVideoCallVideoWrapper" id="videoWrapper">
+            <div
+              id="host-video"
+              class="degpegVideoCallVideoHost movable"
+              style="display: none"
+            ></div>
+            <div class="oneToOneDegpegMultiCall fullwidth">
+              <div
+                id="video-tiles"
+                class="degpegVideoCalls"
+                onload="getAllVideos()"
+                style="height: 100%; overflow: hidden"
+              ></div>
+              <div
+                class="degpegVideoCallCard"
+                id="connectingCallCard"
+                style="opacity: 0.75; display: block"
+              >
+                <div class="degpegVideoCallCardWaiting connectingCall">
+                  <video autoplay="" playsinline=""></video>
+                  <div class="degpeg-connectLoader">
+                    <div class="loader-ripple">
+                      <div></div>
+                      <div></div>
+                    </div>
+                    <span>Connecting to our Expert</span>
+                    <p>
+                      Please wait... <br />
+                      We are waiting for expert to join this call. <br /><br />
+                      This usually takes less than 2 minutes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div
+              class="degpegVideoCallActionBtn"
+              id="vc-action-btn"
+              style="display: none"
+            >
+              <button
+                onclick="dropMeeting()"
+                class="degpegVideoCallActionHangBtn hangup"
+              >
+                <img
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/hangup.svg"
+                /></button
+              ><button
+                id="mute-audio-btn"
+                onclick="toggleMute()"
+                class="degpegVideoCallActionMikeBtn"
+              >
+                <img
+                  id="unmuted-audio"
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/unmute.svg"
+                /></button
+              ><button
+                onclick="switchCamera()"
+                class="degpegVideoCallActionSwitchBtn"
+              >
+                <img
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/camera-back.svg"
+                /></button
+              ><button class="degpegMoreOption" onclick="toggleMoreOption()">
+                <span></span>
+              </button>
+            </div>
+            <div id="more-options" class="degpegMoreOptionWrapper">
+              <button onclick="toggleVideoStatus()" id="video-switch">
+                <img
+                  id="video-status-on"
+                  alt="toggle video"
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/videoon.svg"
+                /><span>Video On/Off</span></button
+              ><button onclick="toggleExpand()">
+                <img
+                  id="toggle-expand-img"
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/maximize.svg"
+                /><span>Expand</span></button
+              ><button
+                onclick="clickSnapshot()"
+                class="degpegVideoCallActionPhotoBtn"
+                id="snapshot-btn"
+              >
+                <img
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/photo-click.svg"
+                /><span>Snapshot</span></button
+              ><button onclick="toggleUpload()">
+                <img
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/photo-click.svg"
+                /><span>Upload</span>
+              </button>
+              <input
+                type="file"
+                id="fileInput"
+                style="display: none"
+                onchange="handleFileUpload(event)"
+              />
+              <button
+                onclick="startScreenRecording()"
+                id="start-recording"
+                style="display: none"
+              >
+                <img
+                  id="recording-btn"
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/recording.svg"
+                /><span>Recording</span>
+              </button>
+              <button
+                onclick="stopScreenRecording()"
+                id="stop-recording"
+                style="display: none"
+              >
+                <img
+                  id="recording-btn"
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/recording-end.svg"
+                /><span>Recording</span>
+              </button>
+              <span class="degpegMoreClose" onclick="toggleMoreOption()"
+                >Close</span
+              ><button id="start-screenshare" onclick="onShareScreen()">
+                <img
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/sharescreen.svg"
+                /><span>ShareScreen</span>
+              </button>
+              <button
+                id="stop-screenshare"
+                style="display: none"
+                onclick="offShareScreen()"
+              >
+                <img
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/sharescreen.svg"
+                /><span>Stop ShareScreen</span></button
+              ><button onclick="toggleChat()" id="chat-feature">
+                <img
+                  src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/chat.svg"
+                /><span>Chat</span><span class="notify"></span>
+              </button>
+            </div>
+            <div
+              class="degpeg-network-btn"
+              id="degpegNetworkBtn"
+              style="color: green"
+            >
+              10 mb/s
+            </div>
+            <div class="degpeg-record-notify-btn bottom" style="display: none">
+              <span></span>Rec Start
+            </div>
+            <div class="degpeg-record-notify-btn" style="display: flex">
+              <span></span>Recording
+            </div>
+          </div>
+        </div>
+        <div class="degpeg-onetoone-thankyou" id="degpeg-onetoone-thankyou">
+          <img
+            src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/thankyou.gif"
+          /><span
+            >All our executive are busy at this moment !<br /><br /><b
+              >Please try after sometime.<br />It's a Pleasure to Connect with
+              You!</b
+            ></span
+          >
+          <div class="degpeg-onetoone-thankyou-card"></div>
+        </div>
+      </div>
+      <div class="assistFullCard" id="assistFullCard" style="display: none">
+        <div class="assistCardHeader">
+          <h5>How Can we Help you?</h5>
+          <p>Select a category so we can serve you better.</p>
+        </div>
+        <div class="assistFullCardVideo">
+          <video
+            id="assistVideo"
+            src="https://d3ur2dp0uh3ite.cloudfront.net/sdk-video-files/2023-08-18T07%3A57%3A19.963Z_60ab302c94127e2c56ec7378_Vipul%20QR%20code%20Video-%204MB.mp4"
+            poster="https://www.cdn.degpeg.com/onetoone/v1/assets/loader.gif"
+            autoplay=""
+            loop=""
+            playsinline=""
+            muted=""
+          ></video
+          ><button
+            id="assistCardMuteBtn"
+            class="assistFullCardMute"
+            onclick="unmutedVideo()"
+            fdprocessedid="62g1id9"
+            style="border: none"
+          >
+            <svg width="44" height="44" viewBox="0 0 44 44" fill="none">
+              <g filter="url(#filter0_b_840:141)">
+                <circle
+                  cx="22"
+                  cy="22"
+                  r="22"
+                  fill="black"
+                  fill-opacity="45%"
+                ></circle>
+              </g>
+              <path
+                d="M13.2803 12.2197C12.9874 11.9268 12.5126 11.9268 12.2197 12.2197C11.9268 12.5126 11.9268 12.9874 12.2197 13.2803L16.4378 17.4986H14.25C13.0074 17.4986 12 18.5059 12 19.7486V24.2465C12 25.4891 13.0074 26.4965 14.25 26.4965H17.9296C18.1133 26.4965 18.2906 26.5639 18.4279 26.686L22.9194 30.6797C23.7255 31.3965 25 30.8242 25 29.7456V26.0609L30.7194 31.7805C31.0123 32.0734 31.4872 32.0734 31.7801 31.7805C32.073 31.4876 32.073 31.0127 31.7801 30.7198L13.2803 12.2197ZM23.5 24.5609V29.1888L19.4247 25.565C19.0128 25.1988 18.4807 24.9965 17.9296 24.9965H14.25C13.8358 24.9965 13.5 24.6607 13.5 24.2465V19.7486C13.5 19.3344 13.8358 18.9986 14.25 18.9986H17.9296C17.9323 18.9986 17.9351 18.9986 17.9378 18.9985L23.5 24.5609ZM23.5 14.8068V20.3182L25 21.8182V14.25C25 13.1714 23.7255 12.5991 22.9195 13.3158L19.52 16.3381L20.5825 17.4006L23.5 14.8068ZM27.141 23.9592L28.279 25.0973C28.7408 24.1628 29 23.1107 29 22C29 20.7968 28.6958 19.6624 28.1596 18.6718C27.9624 18.3076 27.5072 18.1721 27.143 18.3693C26.7787 18.5665 26.6432 19.0216 26.8404 19.3859C27.2609 20.1627 27.5 21.0523 27.5 22C27.5 22.691 27.3729 23.3512 27.141 23.9592ZM29.3881 26.2064L30.4815 27.2998C31.4437 25.7631 32 23.9457 32 22C32 19.7739 31.2717 17.7157 30.0407 16.0536C29.7941 15.7207 29.3244 15.6508 28.9916 15.8973C28.6587 16.1438 28.5888 16.6135 28.8353 16.9464C29.8815 18.3589 30.5 20.1062 30.5 22C30.5 23.5311 30.0958 24.9663 29.3881 26.2064Z"
+                fill="white"
+              ></path>
+              <defs>
+                <filter
+                  id="filter0_b_840:141"
+                  x="-20"
+                  y="-20"
+                  width="84"
+                  height="84"
+                  filterUnits="userSpaceOnUse"
+                  color-interpolationfilters="sRGB"
+                >
+                  <feFlood
+                    flood-opacity="0"
+                    result="BackgroundImageFix"
+                  ></feFlood>
+                  <feGaussianBlur
+                    in="BackgroundImage"
+                    stdDeviation="10"
+                  ></feGaussianBlur>
+                  <feComposite
+                    in2="SourceAlpha"
+                    operator="in"
+                    result="effect1_backgroundBlur_840:141"
+                  ></feComposite>
+                  <feBlend
+                    mode="normal"
+                    in="SourceGraphic"
+                    in2="effect1_backgroundBlur_840:141"
+                    result="shape"
+                  ></feBlend>
+                </filter>
+              </defs>
+            </svg>
+          </button>
+        </div>
+        <h4>Click to Connect</h4>
+        <ul class="assistFullCardOption">
+          <li>
+            <button
+              name="video"
+              onclick="showLeadForm(this)"
+              fdprocessedid="qbpp4"
+            >
+              <svg width="26" height="18" viewBox="0 0 22 14" fill="none">
+                <path
+                  d="M13.5105 13.4309H1.87895C0.889474 13.4309 0 12.7149 0 11.7704V2.22856C0 1.28403 0.889474 0.430908 1.87895 0.430908H13.5105C14.5 0.430908 15.2632 1.28403 15.2632 2.22856V11.7704C15.2632 12.7149 14.5 13.4309 13.5105 13.4309ZM14.3684 2.22856C14.3684 1.7563 14.0053 1.29419 13.5105 1.29419H1.87895C1.38421 1.29419 0.894737 1.7563 0.894737 2.22856V11.7704C0.894737 12.2426 1.36842 12.5575 1.86316 12.5575L13.4947 12.5524C13.9895 12.5524 14.3684 12.2426 14.3684 11.7704V2.22856ZM16.8421 9.1145V4.76763L22 2.05591V11.8059L16.8421 9.1145ZM21.1053 10.2825V3.56411L17.7368 5.26528V8.59653L21.1105 10.3028L21.1053 10.2825Z"
+                  fill="#fff"
+                ></path>
+              </svg></button
+            ><span>Video Call</span>
+          </li>
+          <li>
+            <button
+              name="audio"
+              onclick="showLeadForm(this)"
+              fdprocessedid="kdh5vn"
+            >
+              <svg width="20" height="25" viewBox="0 0 20 25" fill="none">
+                <path
+                  d="M8.29722 10.2475C8.5 12.1557 9.33735 13.9407 10.6751 15.3166C10.7734 15.4161 10.896 15.4883 11.0306 15.5261C11.1653 15.5639 11.3075 15.5659 11.4432 15.5321L14.4138 14.8081C14.5452 14.776 14.6825 14.7773 14.8133 14.8117C14.944 14.8462 15.0642 14.9127 15.1627 15.0052L18.9373 18.5495C19.0657 18.6693 19.1517 18.8276 19.1824 19.0006C19.213 19.1735 19.1866 19.3517 19.1071 19.5084C18.5632 20.563 17.6535 21.3832 16.5484 21.8154C15.4433 22.2477 14.2186 22.2623 13.1035 21.8565C9.65951 20.603 6.85451 18.0328 5.30556 14.7113C3.75662 11.3897 3.5906 7.58882 4.84404 4.14484C5.24993 3.02979 6.04833 2.10093 7.08976 1.53216C8.13119 0.963397 9.34422 0.793731 10.5017 1.05494C10.6728 1.09474 10.8263 1.18907 10.9391 1.3237C11.0519 1.45834 11.1179 1.62599 11.1272 1.80139L11.4164 6.97555C11.4239 7.10938 11.3982 7.24299 11.3415 7.36447C11.2849 7.48595 11.199 7.59154 11.0917 7.67183L8.61988 9.52083C8.50784 9.6037 8.41922 9.71421 8.36266 9.84158C8.30611 9.96894 8.28356 10.1088 8.29722 10.2475Z"
+                  stroke="#fff"
+                  stroke-width="1.30545"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                ></path>
+              </svg></button
+            ><span>Audio Call</span>
+          </li>
+          <li>
+            <button
+              name="schedule"
+              onclick="showLeadForm(this)"
+              fdprocessedid="ckgkrr"
+            >
+              <svg width="20" height="20" viewBox="3 3 14 14" fill="none">
+                <path
+                  d="M7 11C7.55228 11 8 10.5523 8 10C8 9.44771 7.55228 9 7 9C6.44772 9 6 9.44771 6 10C6 10.5523 6.44772 11 7 11ZM8 13C8 13.5523 7.55228 14 7 14C6.44772 14 6 13.5523 6 13C6 12.4477 6.44772 12 7 12C7.55228 12 8 12.4477 8 13ZM10 11C10.5523 11 11 10.5523 11 10C11 9.44771 10.5523 9 10 9C9.44771 9 9 9.44771 9 10C9 10.5523 9.44771 11 10 11ZM11 13C11 13.5523 10.5523 14 10 14C9.44771 14 9 13.5523 9 13C9 12.4477 9.44771 12 10 12C10.5523 12 11 12.4477 11 13ZM13 11C13.5523 11 14 10.5523 14 10C14 9.44771 13.5523 9 13 9C12.4477 9 12 9.44771 12 10C12 10.5523 12.4477 11 13 11ZM17 5.5C17 4.11929 15.8807 3 14.5 3H5.5C4.11929 3 3 4.11929 3 5.5V14.5C3 15.8807 4.11929 17 5.5 17H14.5C15.8807 17 17 15.8807 17 14.5V5.5ZM4 7H16V14.5C16 15.3284 15.3284 16 14.5 16H5.5C4.67157 16 4 15.3284 4 14.5V7ZM5.5 4H14.5C15.3284 4 16 4.67157 16 5.5V6H4V5.5C4 4.67157 4.67157 4 5.5 4Z"
+                  fill="#fff"
+                ></path>
+              </svg></button
+            ><span>Schedule Call</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="degpeg-onetoone-footer">
+        <img
+          id="footer-img"
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/logo.svg"
+        /><a href="https://degpeg.com/" target="_blank"
+          >Powered by <b>Degpeg</b></a
+        >
+      </div>
+    </div>
+
+    <script>
+      const targetDiv = document.getElementById("degpeg-widget");
+      const rect = targetDiv.getBoundingClientRect(); // x, y, width, height of the div
+
+      async function processAndCropVideo(recordedBlob) {
+        // Load ffmpeg.js
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        // Initialize ffmpeg
+        await ffmpeg.load();
+
+        // Convert the Blob to ArrayBuffer
+        const videoBuffer = await recordedBlob.arrayBuffer();
+
+        // Write the video file to FFmpeg's virtual file system
+        ffmpeg.FS("writeFile", "input.webm", new Uint8Array(videoBuffer));
+
+        // Get the dimensions and position of the div to crop
+        const rect = document
+          .getElementById("degpeg-widget")
+          .getBoundingClientRect();
+        const { x, y, width, height } = rect;
+
+        // Build the FFmpeg command to crop the video
+        await ffmpeg.run(
+          "-i",
+          "input.webm", // Input video file
+          "-vf",
+          `crop=${width}:${height}:${x}:${y}`, // Crop filter
+          "-c:a",
+          "copy", // Copy audio stream without re-encoding
+          "output.webm" // Output file name
+        );
+
+        // Read the cropped video file from FFmpeg's virtual file system
+        const croppedVideo = ffmpeg.FS("readFile", "output.webm");
+
+        // Create a Blob from the output video
+        const croppedBlob = new Blob([croppedVideo.buffer], {
+          type: "video/webm",
+        });
+
+        // Trigger the download
+        const downloadLink = document.createElement("a");
+        downloadLink.href = URL.createObjectURL(croppedBlob);
+        downloadLink.download = "cropped_video.webm";
+        downloadLink.click();
+      }
+
+      async function startRecording() {
+        const displayStream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: true,
+        });
+
+        const options = { mimeType: "video/webm; codecs=vp9,opus" };
+        const mediaRecorder = new MediaRecorder(displayStream, options);
+        const chunks = [];
+
+        mediaRecorder.ondataavailable = function (event) {
+          if (event.data.size > 0) {
+            chunks.push(event.data);
+          }
+        };
+
+        mediaRecorder.onstop = async function () {
+          const recordedBlob = new Blob(chunks, { type: "video/webm" });
+          await processAndCropVideo(recordedBlob); // Call the cropping function
+        };
+
+        mediaRecorder.start();
+
+        // Stop after a certain duration or based on user action
+        setTimeout(() => mediaRecorder.stop(), 10000);
+      }
+    </script>
   </body>
 </html>

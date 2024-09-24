@@ -229,7 +229,7 @@ html {
   border-radius: 4px;
   padding: 8px 12px;
   font-size: 13px;
-  text-transform: capitalize;
+  /* text-transform: capitalize; */
 }
 #degpeg-widget input {
   line-height: 34px;
@@ -397,7 +397,7 @@ html {
   margin: auto;
   font-size: 10px;
   line-height: 160%;
-  text-transform: capitalize;
+  /* text-transform: capitalize; */
   font-weight: normal;
 }
 #degpeg-widget .degpegMoreOption span {
@@ -568,7 +568,7 @@ html {
   line-height: 150%;
   margin: 20px 0 0px;
   letter-spacing: 0.6px;
-  text-transform: capitalize;
+  /* text-transform: capitalize; */
 }
 #degpeg-widget .degpegVideoCallConnected {
   position: relative;
@@ -1113,8 +1113,8 @@ html {
 }
 #degpeg-widget .degpeg-onetoone-schedule-card {
   background: #fff;
-  padding: 1.5em;
-  margin-bottom: 30px;
+  padding: 0.5em;
+  /* margin-bottom: 30px; */
   border-radius: 8px;
 }
 #degpeg-widget .degpeg-onetoone-thankyou {
@@ -1257,7 +1257,7 @@ html {
   color: #ba3939;
   background: #ffcdcd;
   border: 1px solid #a33a3a;
-  text-transform: capitalize;
+  /* text-transform: capitalize; */
 }
 .error-msg::before {
   content: "";
@@ -1897,6 +1897,11 @@ html {
     min-height: 500px;
     max-height: calc(100vh - 30px);
   }
+}
+
+.shared-screen {
+  object-fit: contain !important;
+  background-color: #000 !important;
 }
 
 .iti__flag {

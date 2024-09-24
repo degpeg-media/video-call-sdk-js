@@ -5,43 +5,61 @@ let callSettingsData;
 let intervalId;
 let isIntervalActive = true;
 let meetingDropped = false;
+let callWaitingTimerId;
+let authToken;
 
-let apiUrl = "https://dev.db.degpeg.com/";
-let imgAssetUrl = "img";
-let htmlAssetUrl = "html";
+let dbApiUrl =
+  "https://ea3a-2402-e280-3e19-28f-80e-384b-3137-9c7e.ngrok-free.app";
+let sdkApirUrl =
+  "https://0c0d-2402-e280-3e19-28f-80e-384b-3137-9c7e.ngrok-free.app";
+let imgAssetUrl =
+  "https://bce5-2409-40c2-1002-e28b-3408-b0cd-36c4-9c1d.ngrok-free.app/gosotek/degpeg-dashboard/web-client/img";
+let htmlAssetUrl =
+  "https://bce5-2409-40c2-1002-e28b-3408-b0cd-36c4-9c1d.ngrok-free.app/gosotek/degpeg-dashboard/web-client/html";
 
 document.addEventListener("DOMContentLoaded", () => {
-  socket = io("https://dev.backend.degpeg.com", {
-    query: {
-      contentProviderId: contentProviderId,
-    },
-    transports: ["websocket"],
-    reconnectionAttempts: 5,
-  });
-  socket.on("connect", async () => {
-    console.log("Connected to server");
-
-    await fetch(`${apiUrl}api/getcallsettings/${contentProviderId}`, {
-      method: "GET",
-      headers: {
-        "ngrok-skip-browser-warning": "1234",
+  socket = io(
+    "https://0e37-2402-e280-3e19-28f-80e-384b-3137-9c7e.ngrok-free.app",
+    {
+      query: {
+        contentProviderId: contentProviderId,
       },
-    })
-      .then((response) => {
+      transports: ["websocket"],
+      reconnectionAttempts: 5,
+    }
+  );
+  socket.on("connect", async () => {
+    console.log("Server Connected");
+    authToken = await getToken();
+
+    if (authToken) {
+      try {
+        const response = await fetch(
+          `${dbApiUrl}/api/getcallsettings/${contentProviderId}`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: "Bearer " + authToken,
+              "ngrok-skip-browser-warning": "1234",
+            },
+          }
+        );
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-        return response.json();
-      })
-      .then((data) => {
+        const data = await response.json();
         callSettingsData = data;
-      })
-      .catch((error) => {
+        console.log(callSettingsData);
+      } catch (error) {
         console.error("Error:", error);
-      });
+      }
+    } else {
+      console.error("Failed to retrieve token.");
+    }
 
     if (!document.getElementById("assistCard")) {
-      fetch(htmlAssetUrl+"/assistCard.html")
+      await fetch(htmlAssetUrl + "/assistCard.html")
         .then((response) => response.text())
         .then((data) => {
           const body = document.body;
@@ -56,14 +74,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const outboundMeetingId = queryParams.get("meetingId");
       const qrStatus = queryParams.get("qr");
+      const offlineVideo = queryParams.get("offline");
 
       if (qrStatus) {
         await showHeaderFooter();
       }
 
-      if (outboundMeetingId) {
-        console.log("Outbound Meeting ID: ", outboundMeetingId);
+      if (offlineVideo) {
+        await showHeaderFooter();
+      }
 
+      if (outboundMeetingId) {
         userData = {
           meetingId: outboundMeetingId,
           contentProviderId: contentProviderId,
@@ -87,13 +108,31 @@ document.addEventListener("DOMContentLoaded", () => {
 async function showOutboundMeetingPopup(userData) {
   await showHeaderFooter();
   showCallWaitingCard();
-  joinMeeting(userData.meetingId, "");
+  joinMeeting(userData.meetingId, "", "video");
   showVideoCallScreen();
+  requestVideoCall(userData);
+}
+
+async function fetchOfflineVideoHtml() {
+  try {
+    const response = await fetch(htmlAssetUrl + "/prerecordedCall.html");
+    const assistCardHtml = await response.text();
+
+    const targetDiv = document.querySelector("#header");
+    if (targetDiv) {
+      targetDiv.insertAdjacentHTML("afterend", assistCardHtml);
+    } else {
+      console.error("Target div not found to insert assist card");
+    }
+  } catch (error) {
+    console.error("Error fetching the full assist card HTML:", error);
+  }
 }
 
 function requestVideoCall(userData) {
+  console.log("User Data: ", userData);
+
   videoTilesParent = document.getElementById("video-tiles");
-  console.log("videotiles: " + videoTilesParent);
 
   if (userData) {
     if (!videoTilesParent || videoTilesParent.childElementCount < 2) {
@@ -106,7 +145,7 @@ function requestVideoCall(userData) {
 }
 
 async function showHeaderFooter() {
-  await fetch(htmlAssetUrl+"/showHeaderFooter.html")
+  await fetch(htmlAssetUrl + "/showHeaderFooter.html")
     .then((response) => response.text())
     .then((data) => {
       const body = document.body;
@@ -129,12 +168,20 @@ async function showHeaderFooter() {
     }
   }
 
-  showAssistCardFull();
+  const url = new URL(window.location.href);
+  const queryParams = new URLSearchParams(url.search);
+  const offlineVideo = queryParams.get("offline");
+
+  if (!offlineVideo) {
+    showAssistCardFull();
+  } else {
+    fetchOfflineVideoHtml();
+  }
 }
 
 async function showAssistCardFull() {
   try {
-    const response = await fetch(htmlAssetUrl+"/fullAssistCard.html");
+    const response = await fetch(htmlAssetUrl + "/fullAssistCard.html");
     const assistCardHtml = await response.text();
 
     const targetDiv = document.querySelector("#header");
@@ -147,9 +194,18 @@ async function showAssistCardFull() {
     console.error("Error fetching the full assist card HTML:", error);
   }
 
+  if (callSettingsData.welcomeVideoUrl !== "") {
+    var welcomeVideoUrl = encodeURI(callSettingsData.welcomeVideoUrl);
+    var welcomeVideoElement = document.getElementById("assistVideo");
+
+    if (welcomeVideoElement) {
+      welcomeVideoElement.src = welcomeVideoUrl;
+    }
+  }
+
   if (callSettingsData.allowScheduleCall === false) {
     var scheduleLeadElement = document.querySelector(
-      "li button[name='schedule-lead']"
+      "li button[name='schedule']"
     );
 
     if (scheduleLeadElement && scheduleLeadElement.parentNode) {
@@ -158,25 +214,9 @@ async function showAssistCardFull() {
   }
 }
 
-async function showConnectingCallCard() {
-  try {
-    const response = await fetch(htmlAssetUrl+"/connectingCallCard.html");
-    const assistCardHtml = await response.text();
-
-    const targetDiv = document.querySelector("#videoCallWaitingCard");
-    if (targetDiv) {
-      targetDiv.insertAdjacentHTML("afterend", assistCardHtml);
-    } else {
-      console.error("Target div not found to insert assist card");
-    }
-  } catch (error) {
-    console.error("Error fetching the full assist card HTML:", error);
-  }
-}
-
 async function showLeadForm(event) {
   try {
-    const response = await fetch(htmlAssetUrl+"/leadForm.html");
+    const response = await fetch(htmlAssetUrl + "/leadForm.html");
     const assistCardHtml = await response.text();
 
     const targetDiv = document.querySelector("#assistFullCard");
@@ -196,7 +236,7 @@ async function showLeadForm(event) {
       "https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/utils.js",
     initialCountry: "auto",
     geoIpLookup: function (success, failure) {
-      fetch("https://ipinfo.io/json?token=<your_token>")
+      fetch("https://ipinfo.io/json?token=51e63b2d8fe4a0")
         .then(function (resp) {
           return resp.json();
         })
@@ -273,7 +313,7 @@ async function showLeadForm(event) {
 
 async function showCallWaitingCard() {
   try {
-    const response = await fetch(htmlAssetUrl+"/callWaitingCard.html");
+    const response = await fetch(htmlAssetUrl + "/callWaitingCard.html");
     const callWaitingCard = await response.text();
 
     const targetDiv = document.querySelector("#degpegLeadCard");
@@ -293,7 +333,7 @@ async function showCallWaitingCard() {
 
 async function showVideoCallScreen() {
   try {
-    const response = await fetch(htmlAssetUrl+"/videoCall.html");
+    const response = await fetch(htmlAssetUrl + "/videoCall.html");
     const videoCall = await response.text();
 
     const targetDiv = document.querySelector("#videoCallWaitingCard");
@@ -326,7 +366,7 @@ async function showVideoCallScreen() {
 
 async function showAudioCallScreen() {
   try {
-    const response = await fetch(htmlAssetUrl+"/audioCall.html");
+    const response = await fetch(htmlAssetUrl + "/audioCall.html");
     const videoCall = await response.text();
 
     const targetDiv = document.querySelector("#videoCallWaitingCard");
@@ -383,6 +423,11 @@ function removeModal() {
 
       window.history.replaceState(null, "", url.origin + url.pathname);
       location.reload();
+    } else if (searchParams.has("qr")) {
+      searchParams.delete("qr");
+
+      window.history.replaceState(null, "", url.origin + url.pathname);
+      location.reload();
     } else {
       location.reload();
     }
@@ -401,21 +446,21 @@ async function submitUserData() {
     showToast("Please fill in the Name field");
     return false;
   }
-  if (!email) {
+  if (!email && callSettingsData.acceptEmail === true) {
     showToast("Please fill in the Email field");
     return false;
   }
-  if (!phone) {
+  if (!phone && callSettingsData.acceptPhoneNumber === true) {
     showToast("Please fill in the Phone field");
     return false;
   }
 
-  if (!emailRegex.test(email)) {
+  if (!emailRegex.test(email) && callSettingsData.acceptEmail === true) {
     showToast("Please enter a valid Email address");
     return false;
   }
 
-  if (!phoneRegex.test(phone)) {
+  if (!phoneRegex.test(phone) && callSettingsData.acceptPhoneNumber === true) {
     showToast("Please enter a valid Phone number");
     return false;
   }
@@ -474,22 +519,17 @@ async function submitUserData() {
     additionalField2: additionalField2,
   };
 
-  console.log("User Data: ", userData);
-
-  if (userData.callType == "video-lead") {
-    console.log("Make Video Call");
+  if (userData.callType == "video") {
     showCallWaitingCard();
-    await joinMeeting(userData.meetingId, "");
+    await joinMeeting(userData.meetingId, "", "video");
     showVideoCallScreen();
     requestVideoCall(userData);
-  } else if (userData.callType == "audio-lead") {
-    console.log("Make Audio Call");
+  } else if (userData.callType == "audio") {
     showCallWaitingCard();
-    await joinMeeting(userData.meetingId, "");
+    await joinMeeting(userData.meetingId, "", "audio");
     showAudioCallScreen();
     requestVideoCall(userData);
-  } else if (userData.callType == "schedule-lead") {
-    console.log("Schedule a Call");
+  } else if (userData.callType == "schedule") {
     showCallScheduler(userData);
   }
 }
@@ -505,7 +545,7 @@ function showToast(message) {
 
 async function showCallScheduler(userData) {
   try {
-    const response = await fetch(htmlAssetUrl+"/scheduleCall.html");
+    const response = await fetch(htmlAssetUrl + "/scheduleCall.html");
     const callSchedule = await response.text();
 
     const targetDiv = document.querySelector("#degpegLeadCard");
@@ -523,27 +563,29 @@ async function showCallScheduler(userData) {
   submitSlotBtn.addEventListener("click", function () {
     var scheduledDate = document.getElementById("schedule-date").value;
     var scheduledTime = document.getElementById("schedule-time").value;
+    var scheduledCall = document.getElementById("callOptions").value;
 
     if (scheduledDate && scheduledTime) {
       userData.dateScheduled = scheduledDate;
       userData.timeScheduled = scheduledTime;
+      userData.scheduledCallType = scheduledCall;
+
+      submitSlot(userData);
     } else {
       alert("Please fill all the details");
     }
-
-    submitSlot(userData);
   });
 }
 
 async function submitSlot(userData) {
-  requestVideoCall(userData);
+  // requestVideoCall(userData);
   var scheduledCallDetails = formatDateTime(
     userData.dateScheduled,
     userData.timeScheduled
   );
 
   try {
-    const response = await fetch(htmlAssetUrl+"/scheduleSuccess.html");
+    const response = await fetch(htmlAssetUrl + "/scheduleSuccess.html");
     const scheduleSuccessHTML = await response.text();
 
     const targetDiv = document.querySelector("#oneToOneScheduleCall");
@@ -609,7 +651,7 @@ async function getMeetingId() {
   }
 }
 
-function toggleMoreOption() {
+async function toggleMoreOption() {
   let moreOptionsToggle = document.getElementById("more-options");
 
   if (moreOptionsToggle.style.display == "flex") {
@@ -617,6 +659,112 @@ function toggleMoreOption() {
   } else {
     moreOptionsToggle.style.display = "flex";
   }
+}
+
+function toggleMute() {
+  const muteAudioBtn = document.getElementById("mute-audio-btn");
+  const unmutedAudio = document.getElementById("unmuted-audio");
+  const mutedAudio = document.getElementById("muted-audio");
+
+  if (unmutedAudio) {
+    mutedImg = document.createElement("img");
+    mutedImg.id = "muted-audio";
+    mutedImg.src =
+      "https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/mute.svg";
+
+    unmutedAudio.remove();
+    muteAudioBtn.appendChild(mutedImg);
+  }
+
+  if (mutedAudio) {
+    unmutedImg = document.createElement("img");
+    unmutedImg.id = "unmuted-audio";
+    unmutedImg.src =
+      "https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/unmute.svg";
+
+    mutedAudio.remove();
+    muteAudioBtn.appendChild(unmutedImg);
+  }
+
+  toggleAudio();
+}
+
+async function toggleVideoStatus() {
+  const videoSwitch = document.getElementById("video-switch");
+  const videoTitle = videoSwitch.children;
+  const videoButtonOn = document.getElementById("video-status-on");
+  const videoButtonOff = document.getElementById("video-status-off");
+
+  const videoSpan = document.createElement("span");
+  videoSpan.textContent = "Video On/Off";
+
+  if (videoButtonOn) {
+    videoOffImg = document.createElement("img");
+    videoOffImg.id = "video-status-off";
+    videoOffImg.src =
+      "https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/videooff.svg";
+    videoOffImg.alt = "toggle video";
+
+    videoButtonOn.remove();
+    videoTitle[0].remove();
+    videoSwitch.appendChild(videoOffImg);
+    videoSwitch.appendChild(videoSpan);
+  }
+
+  if (videoButtonOff) {
+    videoOnImg = document.createElement("img");
+    videoOnImg.id = "video-status-on";
+    videoOnImg.src =
+      "https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/videoon.svg";
+    videoOnImg.alt = "toggle video";
+
+    videoButtonOff.remove();
+    videoTitle[0].remove();
+    videoSwitch.appendChild(videoOnImg);
+    videoSwitch.appendChild(videoSpan);
+  }
+
+  toggleVideo();
+}
+
+async function toggleChat() {
+  try {
+    const response = await fetch(htmlAssetUrl + "/chatBox.html");
+    const chatBoxContainer = await response.text();
+
+    const targetDiv = document.querySelector("#degpegVideoCallCard");
+    if (targetDiv) {
+      targetDiv.insertAdjacentHTML("afterend", chatBoxContainer);
+
+      const hideOptionsList = document.getElementById("more-options");
+      if (hideOptionsList) {
+        hideOptionsList.style.display = "none";
+      }
+    } else {
+      console.error("Target div not found to insert assist card");
+    }
+  } catch (error) {
+    console.error("Error fetching the full assist card HTML:", error);
+  }
+}
+
+function cancelNotification() {
+  var chatBoxContainer = document.getElementById("degpegChatWrapper");
+
+  if (chatBoxContainer) {
+    chatBoxContainer.remove();
+  }
+}
+
+function sendKeyPress(e) {
+  if (e.keyCode == 13) {
+    sendNotification();
+    return false;
+  }
+}
+
+function sendNotification() {
+  console.log("On Key Press Working.");
 }
 
 function getUserLocation() {
@@ -667,7 +815,7 @@ function getUserLocation() {
 
 async function showCallEndedHTML() {
   try {
-    const response = await fetch(htmlAssetUrl+"/callEnded.html");
+    const response = await fetch(htmlAssetUrl + "/callEnded.html");
     const callEndHTML = await response.text();
 
     const targetDiv = document.querySelector("#callConnected");
@@ -682,18 +830,42 @@ async function showCallEndedHTML() {
   }
 }
 
+async function showBusyExecutives() {
+  try {
+    const response = await fetch(htmlAssetUrl + "/busyExecutives.html");
+    const callEndHTML = await response.text();
+
+    const targetDiv = document.querySelector("#callConnected");
+    const toRemoveDiv = document.getElementById("degpeg-onetoone-thankyou");
+    if (targetDiv) {
+      targetDiv.insertAdjacentHTML("afterend", callEndHTML);
+      targetDiv.style.display = "none";
+      toRemoveDiv.remove();
+    } else {
+      console.error("Target div not found to insert assist card");
+    }
+  } catch (error) {
+    console.error("Error fetching the full assist card HTML:", error);
+  }
+}
+
 async function dropMeeting() {
+  clearTimeout(callWaitingTimerId);
+
   if (meetingDropped) return;
 
-  if(localStorage.getItem("executive-status") !== "busy") {
-    const videoTilesParent = document.getElementById("video-tiles");
+  const videoTilesParent = document.getElementById("video-tiles");
   var callEndedDiv = document.getElementById("degpeg-onetoone-thankyou");
   var assistFullCard = document.getElementById("assistFullCard");
+  var stopScreenShareBtn = document.getElementById("stop-screenshare");
 
   if (
     meetingId &&
     (!videoTilesParent || videoTilesParent.childElementCount <= 2)
   ) {
+    if (stopScreenShareBtn.style.display != "none") {
+      await offShareScreen();
+    }
     await endMeeting(meetingId);
     if (!callEndedDiv) {
       showCallEndedHTML();
@@ -702,6 +874,9 @@ async function dropMeeting() {
       assistFullCard.style.display = "none";
     }
   } else {
+    if (stopScreenShareBtn.style.display != "none") {
+      await offShareScreen();
+    }
     await leaveMeeting();
     if (!callEndedDiv) {
       showCallEndedHTML();
@@ -709,10 +884,6 @@ async function dropMeeting() {
     if (assistFullCard) {
       assistFullCard.style.display = "none";
     }
-  }
-  } else {
-    endMeeting();
-    localStorage.setItem('executive-status', 'refresh');
   }
 
   meetingDropped = true;
@@ -724,7 +895,7 @@ function onShareScreen() {
   startScreenShare();
 }
 
-function offShareScreen() {
+async function offShareScreen() {
   document.getElementById("start-screenshare").style.display = "flex";
   document.getElementById("stop-screenshare").style.display = "none";
   stopScreenShare();
@@ -748,7 +919,6 @@ function toggleExpand() {
 }
 
 async function startScreenRecording() {
-  await startScreenRecord();
   var startRecordingButton = document.getElementById("start-recording");
   var stopRecordingButton = document.getElementById("stop-recording");
 
@@ -757,8 +927,10 @@ async function startScreenRecording() {
   }
 
   if (stopRecordingButton) {
-    stopRecordingButton.style.display = "block";
+    stopRecordingButton.style.display = "flex";
   }
+
+  await startScreenRecord();
 }
 
 async function stopScreenRecording() {
@@ -768,7 +940,7 @@ async function stopScreenRecording() {
   var stopRecordingButton = document.getElementById("stop-recording");
 
   if (startRecordingButton) {
-    startRecordingButton.style.display = "block";
+    startRecordingButton.style.display = "flex";
   }
 
   if (stopRecordingButton) {
@@ -776,7 +948,7 @@ async function stopScreenRecording() {
   }
 }
 
-function getAllVideos(videoTilesParent) {
+async function getAllVideos(videoTilesParent) {
   const connectingCallCard = document.getElementById("connectingCallCard");
   const videoHostDiv = document.getElementById("host-video");
 
@@ -785,37 +957,33 @@ function getAllVideos(videoTilesParent) {
   videoTilesParent.style.height = "100%";
   videoTilesParent.style.overflow = "hidden";
 
-  const observerCallback = (mutationsList, observer) => {
+  const observerCallback = async (mutationsList, observer) => {
     for (const mutation of mutationsList) {
       if (mutation.type === "childList") {
         var numberOfVideos = videoTilesParent.childElementCount;
         var videoTilesChildren = videoTilesParent.children;
 
-        if (mutation.removedNodes.length > 0 && numberOfVideos === 1) {
-          console.log(
-            "One of the two videos was removed, calling dropMeeting."
-          );
+        if (mutation.removedNodes.length > 0 && numberOfVideos === 0) {
           dropMeeting();
         }
 
-        if (numberOfVideos === 0) {
-          console.log("All videos were removed, calling dropMeeting.");
-          dropMeeting();
-        }
+        if (mutation.removedNodes.length === 0) {
+          if (numberOfVideos === 1 || videoTilesChildren[0]) {
+            var hostVideo = videoTilesChildren[0];
+            if (hostVideo) {
+              hostVideo.classList.remove("degpegVideoCallVideoHost", "movable");
+              hostVideo.classList.add("degpegVideoCallVideoGuest");
+              hostVideo.style.height = "100%";
+            }
 
-        if (numberOfVideos === 1 || videoTilesChildren[0]) {
-          var hostVideo = videoTilesChildren[0];
-          if (hostVideo) {
-            hostVideo.classList.remove("degpegVideoCallVideoHost", "movable");
-            hostVideo.classList.add("degpegVideoCallVideoGuest");
-            hostVideo.style.height = "100%";
+            if (connectingCallCard) connectingCallCard.style.display = "block";
+            if (videoHostDiv) videoHostDiv.style.display = "none";
           }
-
-          if (connectingCallCard) connectingCallCard.style.display = "block";
-          if (videoHostDiv) videoHostDiv.style.display = "none";
         }
 
         if (numberOfVideos >= 2) {
+          clearTimeout(callWaitingTimerId);
+
           if (videoTilesChildren[0]) {
             var hostVideo = videoTilesChildren[0];
             if (hostVideo) {
@@ -826,7 +994,10 @@ function getAllVideos(videoTilesParent) {
             }
           }
 
-          if (connectingCallCard) connectingCallCard.style.display = "none";
+          if (connectingCallCard) {
+            connectingCallCard.style.display = "none";
+            document.getElementById("vc-action-btn").style.display = "";
+          }
           if (videoHostDiv) videoHostDiv.style.display = "";
         }
 
@@ -941,8 +1112,181 @@ async function addInputFields(
   submitButton.parentNode.insertBefore(newFormGroup, submitButton);
 }
 
-function toggleVideoStatus() {
-  toggleVideo();
+async function uploadFile() {
+  const fileUploadInput = document.getElementById("fileUploadInput");
+  const file = fileUploadInput.files[0];
+
+  if (!file) {
+    console.error("No file selected.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  if (!authToken) {
+    authToken = await getToken();
+  }
+
+  try {
+    const response = await fetch(`${sdkApirUrl}/api/s3/uploadfile`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    if (result.response) {
+      const message = "File Uploaded Successfully!";
+      const type = "success";
+
+      closePopup("fileUploadWrapper");
+      showNotification(message, type);
+    }
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    const message = "Oops! An error occured!";
+    const type = "error";
+
+    closePopup("fileUploadWrapper");
+    showNotification(message, type);
+  }
+}
+
+async function showNotification(message, type) {
+  const existingNotifications = document.getElementById("degpeg-tooltip");
+  if (existingNotifications) {
+    existingNotifications.remove();
+  }
+
+  try {
+    const response = await fetch(htmlAssetUrl + "/callPopupNotification.html");
+    const notificationHtml = await response.text();
+
+    const targetDiv = document.getElementById("degpeg-widget");
+    if (targetDiv) {
+      const tempDiv = document.createElement("div");
+      tempDiv.innerHTML = notificationHtml;
+
+      while (tempDiv.firstChild) {
+        targetDiv.appendChild(tempDiv.firstChild);
+      }
+    } else {
+      console.error("Target div not found to insert assist card");
+    }
+  } catch (error) {
+    console.error("Error fetching the full assist card HTML:", error);
+  }
+
+  const notificationContainer = document.getElementById("degpeg-tooltip");
+  const notificationBtn = document.getElementById("tooltip-btn");
+  const notificationMsg = document.getElementById("notification-msg");
+
+  if (notificationContainer || notificationBtn) {
+    notificationContainer.classList.add(type);
+    notificationBtn.classList.add(type);
+  }
+
+  if (notificationMsg) {
+    notificationMsg.innerHTML = message;
+  }
+
+  setTimeout(hideNotification, 5000);
+}
+
+function hideNotification() {
+  const notificationDiv = document.getElementById("degpeg-tooltip");
+  if (notificationDiv) {
+    notificationDiv.remove();
+  }
+}
+
+async function toggleUpload() {
+  try {
+    const response = await fetch(htmlAssetUrl + "/fileUpload.html");
+    const assistCardHtml = await response.text();
+
+    const targetDiv = document.getElementById("degpegVideoCallCard");
+    if (targetDiv) {
+      targetDiv.insertAdjacentHTML("afterend", assistCardHtml);
+    } else {
+      console.error("Target div not found to insert assist card");
+    }
+  } catch (error) {
+    console.error("Error fetching the full assist card HTML:", error);
+  }
+
+  const fileUploadModal = document.getElementById("fileUploadWrapperCard");
+  const fileUploadInput = document.getElementById("fileUploadInput");
+
+  if (fileUploadModal) {
+    fileUploadModal.style.overflow = "hidden";
+  }
+
+  if (fileUploadInput) {
+    fileUploadInput.style.height = "50px";
+  }
+}
+
+async function closePopup(id) {
+  var popupContainer = document.getElementById(id);
+
+  if (popupContainer) {
+    await toggleMoreOption();
+    popupContainer.remove();
+  }
+}
+
+function callWaitingTimer(minutes) {
+  clearTimeout(callWaitingTimerId);
+
+  const timerDuration = minutes * 1000;
+
+  callWaitingTimerId = setTimeout(() => {
+    const videoTiles = document.getElementById("video-tiles");
+    if (videoTiles && videoTiles.childElementCount < 2) {
+      showBusyExecutives();
+      endMeeting(meetingId);
+    } else {
+      clearTimeout(callWaitingTimerId);
+    }
+  }, timerDuration);
+}
+
+async function getToken() {
+  const myHeaders = new Headers();
+  myHeaders.append("Content-Type", "application/json");
+
+  const raw = JSON.stringify({
+    appId: clientId,
+    contentProviderId: contentProviderId,
+    secretKey: clientSecret,
+  });
+
+  const requestOptions = {
+    method: "POST",
+    headers: myHeaders,
+    body: raw,
+    redirect: "follow",
+  };
+
+  try {
+    const response = await fetch(`${dbApiUrl}/api/gettoken`, requestOptions);
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.token;
+  } catch (error) {
+    console.error("Error:", error);
+    return null;
+  }
 }
 
 const startDivCheckInterval = () => {
@@ -956,7 +1300,10 @@ const startDivCheckInterval = () => {
 const checkDivLoaded = () => {
   const videoTilesParent = document.getElementById("video-tiles");
   if (videoTilesParent) {
-    console.log("Div is loaded.");
+    console.log("Video Call Waiting: ", callSettingsData.videoCallWaitingTime);
+    if (callSettingsData.videoCallWaitingTime) {
+      callWaitingTimer(callSettingsData.videoCallWaitingTime);
+    }
     isIntervalActive = false;
     getAllVideos(videoTilesParent);
   }
