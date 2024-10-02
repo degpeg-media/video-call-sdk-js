@@ -9,7 +9,8 @@
   <div class="degpeg-onetoone-thankyou-card">
     <h5>Scheduled On:</h5>
     <p id="scheduled-call"></p>
-    <button class="degpegbtn btn-primary" onclick="copyUrl()">
+    <input onload="generateMeetingLink()" style="display: none;" type="text" id="linkToCopy" readonly>
+    <button id="copy-link" class="degpegbtn btn-primary" onclick="copyUrl()">
       Copy Meeting Link
     </button>
   </div>

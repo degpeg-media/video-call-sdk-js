@@ -7,12 +7,16 @@ let isIntervalActive = true;
 let meetingDropped = false;
 let callWaitingTimerId;
 let authToken;
+let download = false;
 
+let dbApiUrl =
+  "https://dev.db.degpeg.com";
 let sdkApirUrl =
-  "https://dev.sdk.degpeg.com/";
-let dbApiUrl = "https://dev.db.degpeg.com/";
-let imgAssetUrl = "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/img";
-let htmlAssetUrl = "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/html";
+  "https://dev.sdk.degpeg.com";
+let imgAssetUrl =
+  "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/img";
+let htmlAssetUrl =
+  "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/html";
 
 document.addEventListener("DOMContentLoaded", () => {
   socket = io(
@@ -47,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         const data = await response.json();
         callSettingsData = data;
-        console.log(callSettingsData);
       } catch (error) {
         console.error("Error:", error);
       }
@@ -561,11 +564,13 @@ async function showCallScheduler(userData) {
     var scheduledDate = document.getElementById("schedule-date").value;
     var scheduledTime = document.getElementById("schedule-time").value;
     var scheduledCall = document.getElementById("callOptions").value;
+    var meetingLink = window.location.href + "?meetingId=" + userData.meetingId;
 
     if (scheduledDate && scheduledTime) {
       userData.dateScheduled = scheduledDate;
       userData.timeScheduled = scheduledTime;
       userData.scheduledCallType = scheduledCall;
+      userData.meetingLink = meetingLink;
 
       submitSlot(userData);
     } else {
@@ -575,7 +580,7 @@ async function showCallScheduler(userData) {
 }
 
 async function submitSlot(userData) {
-  // requestVideoCall(userData);
+  requestVideoCall(userData);
   var scheduledCallDetails = formatDateTime(
     userData.dateScheduled,
     userData.timeScheduled
@@ -855,6 +860,12 @@ async function dropMeeting() {
   var callEndedDiv = document.getElementById("degpeg-onetoone-thankyou");
   var assistFullCard = document.getElementById("assistFullCard");
   var stopScreenShareBtn = document.getElementById("stop-screenshare");
+  const downloadLink = document.getElementById("recording-url");
+
+  if (download === false) {
+    downloadLink.click();
+    download = true;
+  }
 
   if (
     meetingId &&
@@ -931,8 +942,14 @@ async function startScreenRecording() {
 }
 
 async function stopScreenRecording() {
+  await createDownloadLink();
   await stopScreenRecord();
-  const downloadLink = document.getElementById("download-link");
+
+  const message = "Recording will be downloaded when the call ends";
+  const type = "success";
+
+  showNotification(message, type);
+
   var startRecordingButton = document.getElementById("start-recording");
   var stopRecordingButton = document.getElementById("stop-recording");
 
@@ -943,6 +960,35 @@ async function stopScreenRecording() {
   if (stopRecordingButton) {
     stopRecordingButton.style.display = "none";
   }
+}
+
+async function createDownloadLink() {
+  const a = document.createElement("a");
+  a.id = "recording-url";
+  a.download = "call-recording.mp4";
+
+  document.body.appendChild(a);
+}
+
+async function copyUrl() {
+  const baseUrl = window.location.href;
+  const meetingId = await getMeetingId();
+  const meetingLink = baseUrl + "?meetingId=" + meetingId;
+
+  navigator.clipboard
+    .writeText(meetingLink)
+    .then(() => {
+      const message = "Link Copied!";
+      const type = "success";
+
+      showNotification(message, type);
+    })
+    .catch((err) => {
+      const message = "Failed to Copy Link";
+      const type = "error";
+
+      showNotification(message, type);
+    });
 }
 
 async function getAllVideos(videoTilesParent) {
