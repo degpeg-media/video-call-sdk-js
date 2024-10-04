@@ -73,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const queryParams = new URLSearchParams(url.search);
 
       const outboundMeetingId = queryParams.get("meetingId");
+      const scheduledCall = queryParams.get("callType");
       const qrStatus = queryParams.get("qr");
       const offlineVideo = queryParams.get("offline");
 
@@ -88,13 +89,14 @@ document.addEventListener("DOMContentLoaded", () => {
         userData = {
           meetingId: outboundMeetingId,
           contentProviderId: contentProviderId,
+          callType: scheduledCall,
         };
 
         showOutboundMeetingPopup(userData);
       }
     }
 
-    if (callSettingsData.welcomeVideoUrl !== "") {
+    if (callSettingsData.welcomeVideoUrl) {
       var welcomeVideoUrl = encodeURI(callSettingsData.welcomeVideoUrl);
       var welcomeVideoElement = document.getElementById("welcome-video");
 
@@ -103,12 +105,28 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+  socket.on('message', (msg) => {
+    const li = document.createElement('li');
+    li.textContent = msg;
+    console.log("Chat Message: ", msg);
+    messages.appendChild(li);
+  });
 });
 
 async function showOutboundMeetingPopup(userData) {
   await showHeaderFooter();
   showCallWaitingCard();
-  joinMeeting(userData.meetingId, "", "video");
+  if (userData.scheduledCall) {
+    if (userData.scheduledCall === "video") {
+      joinMeeting(userData.meetingId, "", "video");
+    }
+
+    if (userData.scheduledCall === "audio") {
+      joinMeeting(userData.meetingId, "", "audio");
+    }
+  } else {
+    joinMeeting(userData.meetingId, "", "video");
+  }
   showVideoCallScreen();
   requestVideoCall(userData);
 }
@@ -155,7 +173,7 @@ async function showHeaderFooter() {
       console.error("Error fetching the full assist card HTML:", error)
     );
 
-  if (callSettingsData.sdkLogo !== "") {
+  if (callSettingsData.sdkLogo) {
     var logoUrl = callSettingsData.sdkLogo;
     var headerImg = document.getElementById("header-img");
     var footerImg = document.getElementById("footer-img");
@@ -194,7 +212,7 @@ async function showAssistCardFull() {
     console.error("Error fetching the full assist card HTML:", error);
   }
 
-  if (callSettingsData.welcomeVideoUrl !== "") {
+  if (callSettingsData.welcomeVideoUrl) {
     var welcomeVideoUrl = encodeURI(callSettingsData.welcomeVideoUrl);
     var welcomeVideoElement = document.getElementById("assistVideo");
 
@@ -564,11 +582,11 @@ async function showCallScheduler(userData) {
     var scheduledDate = document.getElementById("schedule-date").value;
     var scheduledTime = document.getElementById("schedule-time").value;
     var scheduledCall = document.getElementById("callOptions").value;
-    var meetingLink = window.location.href + "?meetingId=" + userData.meetingId;
+    var meetingLink = window.location.href + "?meetingId=" + userData.meetingId + "&callType=" + scheduledCall;
 
     if (scheduledDate && scheduledTime) {
-      userData.dateScheduled = scheduledDate;
-      userData.timeScheduled = scheduledTime;
+      userData.scheduledDate = scheduledDate;
+      userData.scheduledTime = scheduledTime;
       userData.scheduledCallType = scheduledCall;
       userData.meetingLink = meetingLink;
 
@@ -582,8 +600,8 @@ async function showCallScheduler(userData) {
 async function submitSlot(userData) {
   requestVideoCall(userData);
   var scheduledCallDetails = formatDateTime(
-    userData.dateScheduled,
-    userData.timeScheduled
+    userData.scheduledDate,
+    userData.scheduledTime
   );
 
   try {
@@ -862,7 +880,9 @@ async function dropMeeting() {
   var stopScreenShareBtn = document.getElementById("stop-screenshare");
   const downloadLink = document.getElementById("recording-url");
 
-  if (download === false) {
+  console.log(downloadLink);
+
+  if (downloadLink && download === false) {
     downloadLink.click();
     download = true;
   }
@@ -973,7 +993,8 @@ async function createDownloadLink() {
 async function copyUrl() {
   const baseUrl = window.location.href;
   const meetingId = await getMeetingId();
-  const meetingLink = baseUrl + "?meetingId=" + meetingId;
+  var scheduledCall = document.getElementById("callOptions").value;
+  const meetingLink = baseUrl + "?meetingId=" + meetingId + "&callType=" + scheduledCall;
 
   navigator.clipboard
     .writeText(meetingLink)
@@ -1305,6 +1326,7 @@ function callWaitingTimer(minutes) {
 async function getToken() {
   const myHeaders = new Headers();
   myHeaders.append("Content-Type", "application/json");
+  myHeaders.append("ngrok-skip-browser-warning", "1234");
 
   const raw = JSON.stringify({
     appId: clientId,
