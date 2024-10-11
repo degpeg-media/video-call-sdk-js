@@ -10,9 +10,9 @@ let authToken;
 let download = false;
 
 let dbApiUrl =
-  "https://dev.db.degpeg.com";
+  "https://prod.videocall.db.degpeg.com";
 let sdkApirUrl =
-  "https://dev.sdk.degpeg.com";
+  "https://prod.videocall.sdk.degpeg.com";
 let imgAssetUrl =
   "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/img";
 let htmlAssetUrl =
@@ -20,11 +20,8 @@ let htmlAssetUrl =
 
 document.addEventListener("DOMContentLoaded", () => {
   socket = io(
-    "https://dev.backend.degpeg.com",
+    "https://prod.videocall.api.degpeg.com",
     {
-      query: {
-        contentProviderId: contentProviderId,
-      },
       transports: ["websocket"],
       reconnectionAttempts: 5,
     }
