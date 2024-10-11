@@ -14,9 +14,9 @@ let dbApiUrl =
 let sdkApirUrl =
   "https://dev.sdk.degpeg.com";
 let imgAssetUrl =
-  "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/img";
+  "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@test-client/web-client/img";
 let htmlAssetUrl =
-  "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@main/web-client/html";
+  "https://cdn.jsdelivr.net/gh/degpeg-media/video-call-sdk-js@test-client/web-client/html";
 
 document.addEventListener("DOMContentLoaded", () => {
   socket = io(
