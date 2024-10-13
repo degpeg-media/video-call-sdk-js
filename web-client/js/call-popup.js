@@ -2,7 +2,7 @@ let socket;
 let videoTilesParent;
 let meetingId;
 let callSettingsData;
-let intervalId;
+let degpegIntervalId;
 let isIntervalActive = true;
 let meetingDropped = false;
 let callWaitingTimerId;
@@ -1207,7 +1207,7 @@ async function uploadFile() {
       const message = "File Uploaded Successfully!";
       const type = "success";
 
-      closePopup("fileUploadWrapper");
+      degpegClosePopup("fileUploadWrapper");
       showNotification(message, type);
     }
   } catch (error) {
@@ -1215,7 +1215,7 @@ async function uploadFile() {
     const message = "Oops! An error occured!";
     const type = "error";
 
-    closePopup("fileUploadWrapper");
+    degpegClosePopup("fileUploadWrapper");
     showNotification(message, type);
   }
 }
@@ -1295,7 +1295,7 @@ async function toggleUpload() {
   }
 }
 
-async function closePopup(id) {
+async function degpegClosePopup(id) {
   var popupContainer = document.getElementById(id);
 
   if (popupContainer) {
@@ -1352,7 +1352,7 @@ async function getToken() {
 }
 
 const startDivCheckInterval = () => {
-  intervalId = setInterval(() => {
+  degpegIntervalId = setInterval(() => {
     if (isIntervalActive) {
       checkDivLoaded();
     }
