@@ -172,7 +172,7 @@ async function showHeaderFooter() {
 
   if (callSettingsData.sdkLogo) {
     var logoUrl = callSettingsData.sdkLogo;
-    var headerImg = document.getElementById("header-img");
+    var headerImg = document.getElementById("degpeg-header-img");
     var footerImg = document.getElementById("footer-img");
 
     if (headerImg) {

@@ -64,7 +64,7 @@ html {
   user-select: none;
   box-sizing: border-box;
   padding-bottom: 25px;
-  display: flex;
+  display: block !important;
   flex-direction: column;
   -webkit-animation: 0.5s ease-out 0s 1 scaleFromBottom;
   -moz-animation: 0.5s ease-out 0s 1 scaleFromBottom;
@@ -171,6 +171,7 @@ html {
   z-index: 1;
   background: rgb(255 255 255 / 60%);
   border-radius: 4px;
+  display: block !important;
 }
 #degpeg-widget .degpeg-onetoone-closebtn::after,
 #degpeg-widget .degpeg-onetoone-closebtn::before {
