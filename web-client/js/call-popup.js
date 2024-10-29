@@ -115,14 +115,14 @@ async function showOutboundMeetingPopup(userData) {
   showCallWaitingCard();
   if (userData.scheduledCall) {
     if (userData.scheduledCall === "video") {
-      joinMeeting(userData.meetingId, "", "video");
+      joinMeeting(userData.meetingId, "", "video", degpegAuthToken);
     }
 
     if (userData.scheduledCall === "audio") {
-      joinMeeting(userData.meetingId, "", "audio");
+      joinMeeting(userData.meetingId, "", "audio", degpegAuthToken);
     }
   } else {
-    joinMeeting(userData.meetingId, "", "video");
+    joinMeeting(userData.meetingId, "", "video", degpegAuthToken);
   }
   showVideoCallScreen();
   requestVideoCall(userData);
@@ -536,12 +536,12 @@ async function submitUserData() {
 
   if (userData.callType == "video") {
     showCallWaitingCard();
-    await joinMeeting(userData.meetingId, "", "video");
+    await joinMeeting(userData.meetingId, "", "video", degpegAuthToken);
     showVideoCallScreen();
     requestVideoCall(userData);
   } else if (userData.callType == "audio") {
     showCallWaitingCard();
-    await joinMeeting(userData.meetingId, "", "audio");
+    await joinMeeting(userData.meetingId, "", "audio", degpegAuthToken);
     showAudioCallScreen();
     requestVideoCall(userData);
   } else if (userData.callType == "schedule") {
@@ -653,7 +653,7 @@ function formatDateTime(dateString, timeString) {
 
 async function getMeetingId() {
   try {
-    const response = await createMeeting();
+    const response = await createMeeting(degpegAuthToken);
 
     if (response.ok) {
       const data = await response.json();
@@ -892,7 +892,7 @@ async function dropMeeting() {
     if (stopScreenShareBtn.style.display != "none") {
       await offShareScreen();
     }
-    await endMeeting(degpegMeetingId);
+    await endMeeting(degpegMeetingId, degpegAuthToken);
     if (!callEndedDiv) {
       showCallEndedHTML();
     }
@@ -1315,7 +1315,7 @@ function callWaitingTimer(minutes) {
     const videoTiles = document.getElementById("video-tiles");
     if (videoTiles && videoTiles.childElementCount < 2) {
       showBusyExecutives();
-      endMeeting(degpegMeetingId);
+      endMeeting(degpegMeetingId, degpegAuthToken);
     } else {
       clearTimeout(callWaitingTimerId);
     }
