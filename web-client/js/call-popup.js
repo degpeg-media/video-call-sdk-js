@@ -382,11 +382,24 @@ async function showVideoCallScreen() {
 async function showAudioCallScreen() {
   try {
     const response = await fetch(htmlAssetUrl + "/audioCall.html");
-    const videoCall = await response.text();
+    const audioCall = await response.text();
 
     const targetDiv = document.querySelector("#videoCallWaitingCard");
     if (targetDiv) {
-      targetDiv.insertAdjacentHTML("afterend", videoCall);
+      targetDiv.insertAdjacentHTML("afterend", audioCall);
+
+      const hostDiv = document.getElementById("host-video");
+      hostDiv.remove();
+      document.getElementById("vc-action-btn").style.display = "";
+
+      const videoTilesDiv = document.getElementById("video-tiles");
+      const guestDiv = videoTilesDiv.parentElement;
+      console.log(guestDiv);
+      let guestImg = document.createElement("img");
+      guestImg.src = imgAssetUrl+"/sound.gif";
+      guestImg.style = "width: -webkit-fill-available; height: -webkit-fill-available;";
+      guestDiv.insertBefore(guestImg, guestDiv.firstChild);
+
       targetDiv.style.display = "none";
     } else {
       console.error("Target div not found to insert assist card");
