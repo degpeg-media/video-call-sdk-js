@@ -396,7 +396,7 @@ async function showAudioCallScreen() {
       const guestDiv = videoTilesDiv.parentElement;
       
       let guestImg = document.createElement("img");
-      guestImg.src = imgAssetUrl+"/sound-2.gif";
+      guestImg.src = imgAssetUrl+"/sound.gif";
       guestImg.style = "width: 100%; height: 100%;";
       guestDiv.insertBefore(guestImg, guestDiv.firstChild);    
 
