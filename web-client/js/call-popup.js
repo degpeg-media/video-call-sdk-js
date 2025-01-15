@@ -394,11 +394,11 @@ async function showAudioCallScreen() {
 
       const videoTilesDiv = document.getElementById("video-tiles");
       const guestDiv = videoTilesDiv.parentElement;
-      console.log(guestDiv);
+      
       let guestImg = document.createElement("img");
-      guestImg.src = imgAssetUrl+"/sound.gif";
-      guestImg.style = "width: -webkit-fill-available; height: -webkit-fill-available;";
-      guestDiv.insertBefore(guestImg, guestDiv.firstChild);
+      guestImg.src = imgAssetUrl+"/sound-2.gif";
+      guestImg.style = "width: 100%; height: 100%;";
+      guestDiv.insertBefore(guestImg, guestDiv.firstChild);    
 
       targetDiv.style.display = "none";
     } else {
@@ -1326,7 +1326,7 @@ function callWaitingTimer(minutes) {
 
   callWaitingTimerId = setTimeout(() => {
     const videoTiles = document.getElementById("video-tiles");
-    if (videoTiles && videoTiles.childElementCount < 2) {
+    if (videoTiles && videoTiles.childElementCount < 2 && localStorage.getItem("call-type") == "video") {
       showBusyExecutives();
       endMeeting(degpegMeetingId, degpegAuthToken);
     } else {

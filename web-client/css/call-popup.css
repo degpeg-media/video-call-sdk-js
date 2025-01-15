@@ -1475,15 +1475,15 @@ html {
   cursor: pointer;
   margin-left: auto;
   position: relative;
-  animation: 1s ease 5s 1 normal forwards expandIcon;
+  /* animation: 1s ease 5s 1 normal forwards expandIcon; */
 }
 .assistCard video {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 2px solid #de8181;
+  /* border: 2px solid #de8181; */
   object-fit: cover !important;
-  animation: 1s ease 5s 1 normal forwards radius-animation;
+  /* animation: 1s ease 5s 1 normal forwards radius-animation; */
   box-sizing: border-box !important;
 }
 .assistCard .assistClose {
@@ -1725,7 +1725,7 @@ html {
     visibility: unset;
   }
 }
-@keyframes radius-animation {
+/* @keyframes radius-animation {
   from {
     border-radius: 50%;
   }
@@ -1733,7 +1733,7 @@ html {
     border-radius: 10px;
     border: 0px solid #fff;
   }
-}
+} */
 @keyframes top {
   from {
     opacity: 0;
@@ -1868,8 +1868,8 @@ html {
     right: 0;
     bottom: 0;
     border-radius: 0;
-    height: 100vh;
-    height: calc(var(--vh, 1vh) * 100);
+    height: 100%;
+    /* height: calc(var(--vh, 1vh) * 100); */
   }
   #degpeg-widget .degpegPictureWrapper,
   #degpeg-widget .degpegVideoCallCard,
