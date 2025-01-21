@@ -269,9 +269,32 @@ async function showLeadForm(event) {
   });
 
   var welcomeTitleText = callSettingsData.welcomeTitle;
-  if (welcomeTitleText !== "") {
+  if (welcomeTitleText) {
     var sdkTitle = document.getElementById("sdk-title");
     sdkTitle.innerHTML = welcomeTitleText;
+  }
+
+  var welcomeTitleDescription = callSettingsData.welcomeTitleDescription;
+  if (welcomeTitleDescription) {
+    var sdkSubtitle = document.getElementById("sdk-subtitle");
+    sdkSubtitle.innerHTML = welcomeTitleDescription;
+  }
+
+  var welcomeImage = callSettingsData.welcomeImage;
+  if (welcomeImage) {
+    var welcomeImageHolder = document.getElementById("degpeg-welcome-image");
+    var welcomeImageFirstChild = welcomeImageHolder.firstChild;
+    var newImage = document.createElement("img");
+    newImage.src = welcomeImage;
+
+    welcomeImageHolder.insertBefore(newImage, welcomeImageFirstChild);
+  } else {
+    var welcomeImageHolder = document.getElementById("degpeg-welcome-image");
+    var welcomeImageFirstChild = welcomeImageHolder.firstChild;
+    var newImage = document.createElement("img");
+    newImage.src = `https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/welcome.gif`;
+
+    welcomeImageHolder.insertBefore(newImage, welcomeImageFirstChild);
   }
 
   const callMethod = event.name;
@@ -396,7 +419,7 @@ async function showAudioCallScreen() {
       const guestDiv = videoTilesDiv.parentElement;
       
       let guestImg = document.createElement("img");
-      guestImg.src = imgAssetUrl+"/sound.gif";
+      guestImg.src = imgAssetUrl+"/sound-2.gif";
       guestImg.style = "width: 100%; height: 100%;";
       guestDiv.insertBefore(guestImg, guestDiv.firstChild);    
 
