@@ -1,0 +1,35 @@
+<div class="degpegVideoCallConnected" id="callConnected">
+  <div class="degpegVideoCallVideoWrapper" id="videoWrapper">
+    <div id="host-video" class="degpegVideoCallVideoHost movable"></div>
+    <div class="oneToOneDegpegMultiCall fullwidth">
+      <div
+        id="video-tiles"
+        class="degpegVideoCalls"
+        onload="handlePrerecordedMessage()"
+      ></div>
+    </div>
+    <div
+      class="degpegVideoCallActionBtn"
+      id="vc-action-btn"
+      style="display: none"
+    >
+      <button
+        onclick="dropMeeting()"
+        class="degpegVideoCallActionHangBtn hangup"
+      >
+        <img
+          src="https://www.cdn.degpeg.com/onetoone/bluestar/v1/assets/onetoone/hangup.svg"
+        />
+      </button>
+    </div>
+    <div class="degpeg-network-btn" id="degpegNetworkBtn" style="color: green">
+      10 mb/s
+    </div>
+    <div class="degpeg-record-notify-btn bottom" style="display: none">
+      <span></span>Rec Start
+    </div>
+    <div class="degpeg-record-notify-btn" style="display: flex">
+      <span></span>Recording
+    </div>
+  </div>
+</div>

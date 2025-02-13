@@ -1,4 +1,5 @@
 let degpegSocket;
+let degpegChatSocket;
 let degpegVideoTilesParent;
 let degpegMeetingId;
 let callSettingsData;
@@ -8,7 +9,10 @@ let degpegMeetingDropped = false;
 let callWaitingTimerId;
 let degpegAuthToken;
 let degpegDownload = false;
+let chatHistory = [];
 
+let socketApiUrl = 
+  "https://prod.videocall.api.degpeg.com";
 let dbApiUrl =
   "https://prod.videocall.db.degpeg.com";
 let sdkApirUrl =
@@ -20,7 +24,7 @@ let htmlAssetUrl =
 
 document.addEventListener("DOMContentLoaded", () => {
   degpegSocket = io(
-    "https://prod.videocall.api.degpeg.com",
+    socketApiUrl,
     {
       transports: ["websocket"],
       reconnectionAttempts: 5,
@@ -55,41 +59,38 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Failed to retrieve token.");
     }
 
-    if (!document.getElementById("assistCard")) {
-      await fetch(htmlAssetUrl + "/assistCard.html")
-        .then((response) => response.text())
-        .then((data) => {
-          const body = document.body;
-          body.insertAdjacentHTML("beforeend", data);
-        })
-        .catch((error) =>
-          console.error("Error fetching the assist card HTML:", error)
-        );
-
-      const url = new URL(window.location.href);
-      const queryParams = new URLSearchParams(url.search);
-
-      const outboundMeetingId = queryParams.get("meetingId");
-      const scheduledCall = queryParams.get("callType");
-      const qrStatus = queryParams.get("qr");
-      const offlineVideo = queryParams.get("offline");
-
-      if (qrStatus) {
-        await showHeaderFooter();
-      }
-
-      if (offlineVideo) {
-        await showHeaderFooter();
-      }
-
-      if (outboundMeetingId) {
-        userData = {
-          meetingId: outboundMeetingId,
-          contentProviderId: contentProviderId,
-          callType: scheduledCall,
-        };
-
-        showOutboundMeetingPopup(userData);
+    if (callSettingsData.enableWidget) {
+      if (!document.getElementById("assistCard")) {
+        await fetch(htmlAssetUrl + "/assistCard.html")
+          .then((response) => response.text())
+          .then((data) => {
+            const body = document.body;
+            body.insertAdjacentHTML("beforeend", data);
+          })
+          .catch((error) =>
+            console.error("Error fetching the assist card HTML:", error)
+          );
+  
+        const url = new URL(window.location.href);
+        const queryParams = new URLSearchParams(url.search);
+  
+        const outboundMeetingId = queryParams.get("meetingId");
+        const scheduledCall = queryParams.get("callType");
+        const qrStatus = queryParams.get("qr");
+  
+        if (qrStatus) {
+          await showHeaderFooter();
+        }
+  
+        if (outboundMeetingId) {
+          userData = {
+            meetingId: outboundMeetingId,
+            contentProviderId: contentProviderId,
+            callType: scheduledCall,
+          };
+  
+          showOutboundMeetingPopup(userData);
+        }
       }
     }
 
@@ -102,29 +103,106 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
-  degpegSocket.on('message', (msg) => {
-    const li = document.createElement('li');
-    li.textContent = msg;
-    console.log("Chat Message: ", msg);
-    messages.appendChild(li);
+
+  degpegChatSocket = io(
+    socketApiUrl,
+    {
+      transports: ["websocket"],
+      reconnectionAttempts: 5,
+    }
+  );
+
+  degpegChatSocket.on("connect", async () => {
+    console.log("Messenger Connected");
+  });
+
+  degpegChatSocket.on("message", (degpegUser, degpegMsg) => {
+    console.log("Chat User: ", degpegUser);
+    console.log("Chat MSG: ", degpegMsg);
+    const chatBody = document.getElementById("chat-body");
+    chatHistory = [
+      ...chatHistory,
+      { user: degpegUser, message: degpegMsg },
+    ];
+
+    const messageDiv = document.createElement("div");
+    messageDiv.classList.add("message");
+  
+    // User Image
+    const userImg = document.createElement("img");
+    userImg.classList.add("avatar");
+    userImg.src = degpegUser === "Admin" ? imgAssetUrl+"/admin.png" : imgAssetUrl+"/user.png";
+    userImg.alt = "User Image";
+  
+    const messageContainer = document.createElement("div");
+    messageContainer.classList.add("message-container");
+  
+    const userInfoDiv = document.createElement("div");
+    userInfoDiv.classList.add("user-info");
+  
+    const userName = document.createElement("p");
+    userName.classList.add("user-name");
+    userName.textContent = degpegUser;
+  
+    const timeStamp = document.createElement("span");
+    timeStamp.classList.add("timestamp");
+    timeStamp.textContent = new Date().toLocaleTimeString();
+  
+    userInfoDiv.appendChild(userName);
+    userInfoDiv.appendChild(timeStamp);
+  
+    const chatMessage = document.createElement("span");
+    chatMessage.classList.add("chat-message");
+    chatMessage.textContent = degpegMsg;
+  
+    messageContainer.appendChild(userInfoDiv);
+    messageContainer.appendChild(chatMessage);
+    messageDiv.appendChild(userImg);
+    messageDiv.appendChild(messageContainer);
+    
+    chatBody.appendChild(messageDiv);
+  
+    chatBody.scrollTop = chatBody.scrollHeight;
   });
 });
 
+function generateId() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-';
+  let id = '';
+  for (let i = 0; i < 10; i++) {
+    id += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return id;
+}
+
 async function showOutboundMeetingPopup(userData) {
+  degpegMeetingId = userData.meetingId;
+
+  if (!localStorage.getItem("call-type")) {
+    if (userData.scheduledCall) {
+      localStorage.setItem("call-type", userData.scheduledCall);
+    } else if (userData.callType) {
+      localStorage.setItem("call-type", userData.callType)
+    } else {
+      localStorage.setItem("call-type", "video");
+    }
+  }
+
   await showHeaderFooter();
   showCallWaitingCard();
   if (userData.scheduledCall) {
-    if (userData.scheduledCall === "video") {
-      joinMeeting(userData.meetingId, "", "video", degpegAuthToken);
-    }
-
-    if (userData.scheduledCall === "audio") {
-      joinMeeting(userData.meetingId, "", "audio", degpegAuthToken);
-    }
+    joinMeeting(userData.meetingId, generateId(), userData.scheduledCall, degpegAuthToken);
+  } else if (userData.callType) {
+    joinMeeting(userData.meetingId, generateId(), userData.callType, degpegAuthToken);
   } else {
-    joinMeeting(userData.meetingId, "", "video", degpegAuthToken);
+    joinMeeting(userData.meetingId, generateId(), "video", degpegAuthToken);
   }
-  showVideoCallScreen();
+
+  if (userData.scheduledCall == "video" || userData.callType == "video") {
+    showVideoCallScreen();
+  } else {
+    showAudioCallScreen();
+  }
   requestVideoCall(userData);
 }
 
@@ -133,9 +211,10 @@ async function fetchOfflineVideoHtml() {
     const response = await fetch(htmlAssetUrl + "/prerecordedCall.html");
     const assistCardHtml = await response.text();
 
-    const targetDiv = document.querySelector("#header");
+    const targetDiv = document.querySelector("#degpeg-onetoone-thankyou");
     if (targetDiv) {
       targetDiv.insertAdjacentHTML("afterend", assistCardHtml);
+      targetDiv.style.display = "none";
     } else {
       console.error("Target div not found to insert assist card");
     }
@@ -145,7 +224,7 @@ async function fetchOfflineVideoHtml() {
 }
 
 function requestVideoCall(userData) {
-  console.log("User Data: ", userData);
+  degpegChatSocket.emit('joinChatRoom', userData.meetingId);
 
   degpegVideoTilesParent = document.getElementById("video-tiles");
 
@@ -414,15 +493,6 @@ async function showAudioCallScreen() {
       const hostDiv = document.getElementById("host-video");
       hostDiv.remove();
       document.getElementById("vc-action-btn").style.display = "";
-
-      const videoTilesDiv = document.getElementById("video-tiles");
-      const guestDiv = videoTilesDiv.parentElement;
-      
-      let guestImg = document.createElement("img");
-      guestImg.src = imgAssetUrl+"/sound-2.gif";
-      guestImg.style = "width: 100%; height: 100%;";
-      guestDiv.insertBefore(guestImg, guestDiv.firstChild);    
-
       targetDiv.style.display = "none";
     } else {
       console.error("Target div not found to insert assist card");
@@ -489,6 +559,8 @@ async function submitUserData() {
   const name = document.getElementById("leadName").value.trim();
   const email = document.getElementById("leadEmail").value.trim();
   const phone = document.getElementById("leadPhone").value.trim();
+
+  localStorage.setItem("user-name", name);
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const phoneRegex = /^[0-9]{10}$/;
@@ -572,12 +644,12 @@ async function submitUserData() {
 
   if (userData.callType == "video") {
     showCallWaitingCard();
-    await joinMeeting(userData.meetingId, "", "video", degpegAuthToken);
+    await joinMeeting(userData.meetingId, generateId(), "video", degpegAuthToken);
     showVideoCallScreen();
     requestVideoCall(userData);
   } else if (userData.callType == "audio") {
     showCallWaitingCard();
-    await joinMeeting(userData.meetingId, "", "audio", degpegAuthToken);
+    await joinMeeting(userData.meetingId, generateId(), "audio", degpegAuthToken);
     showAudioCallScreen();
     requestVideoCall(userData);
   } else if (userData.callType == "schedule") {
@@ -782,19 +854,26 @@ async function toggleVideoStatus() {
 
 async function toggleChat() {
   try {
-    const response = await fetch(htmlAssetUrl + "/chatBox.html");
-    const chatBoxContainer = await response.text();
+    document.getElementById("more-options").style = "display: none;";
+    var chatBoxContainer = document.getElementById("degpegChatWrapper");
 
-    const targetDiv = document.querySelector("#degpegVideoCallCard");
-    if (targetDiv) {
-      targetDiv.insertAdjacentHTML("afterend", chatBoxContainer);
-
-      const hideOptionsList = document.getElementById("more-options");
-      if (hideOptionsList) {
-        hideOptionsList.style.display = "none";
-      }
+    if (chatBoxContainer) {
+      chatBoxContainer.style = "display: block";
     } else {
-      console.error("Target div not found to insert assist card");
+      const response = await fetch(htmlAssetUrl + "/chatBox.html");
+      const chatBoxContainer = await response.text();
+
+      const targetDiv = document.querySelector("#degpegVideoCallCard");
+      if (targetDiv) {
+        targetDiv.insertAdjacentHTML("afterend", chatBoxContainer);
+
+        const hideOptionsList = document.getElementById("more-options");
+        if (hideOptionsList) {
+          hideOptionsList.style.display = "none";
+        }
+      } else {
+        console.error("Target div not found to insert assist card");
+      }
     }
   } catch (error) {
     console.error("Error fetching the full assist card HTML:", error);
@@ -805,7 +884,7 @@ function cancelNotification() {
   var chatBoxContainer = document.getElementById("degpegChatWrapper");
 
   if (chatBoxContainer) {
-    chatBoxContainer.remove();
+    chatBoxContainer.style = "display: none";
   }
 }
 
@@ -817,7 +896,14 @@ function sendKeyPress(e) {
 }
 
 function sendNotification() {
-  console.log("On Key Press Working.");
+  let degpegUser = localStorage.getItem("user-name") || "Guest User";
+  let chatInput = document.getElementById("chat-msg");
+  let degpegMsg = chatInput?.value?.trim();
+
+  if (degpegMsg) {
+    degpegChatSocket.emit("chatMessage", degpegUser, degpegMsg, degpegMeetingId);
+    chatInput.value = "";
+  }
 }
 
 function getUserLocation() {
@@ -883,6 +969,20 @@ async function showCallEndedHTML() {
   }
 }
 
+async function handleCallEnd() {
+  if (localStorage.getItem("exec-busy") == "true") {
+    if (localStorage.getItem("call-type") == "pre-recorded") {
+      showCallEndedHTML();  
+    } else {
+      showBusyExecutives();
+    }
+  } else {
+    showCallEndedHTML();
+  }
+
+  localStorage.setItem("exec-busy", "false");
+}
+
 async function showBusyExecutives() {
   try {
     const response = await fetch(htmlAssetUrl + "/busyExecutives.html");
@@ -903,53 +1003,56 @@ async function showBusyExecutives() {
 }
 
 async function dropMeeting() {
-  clearTimeout(callWaitingTimerId);
-
-  if (degpegMeetingDropped) return;
-
-
-  const degpegVideoTilesParent = document.getElementById("video-tiles");
-  var callEndedDiv = document.getElementById("degpeg-onetoone-thankyou");
-  var assistFullCard = document.getElementById("assistFullCard");
-  var stopScreenShareBtn = document.getElementById("stop-screenshare");
-  const downloadLink = document.getElementById("recording-url");
-
-  console.log(downloadLink);
-
-  if (downloadLink && degpegDownload === false) {
-    downloadLink.click();
-    degpegDownload = true;
-  }
-
-  if (
-    degpegMeetingId &&
-    (!degpegVideoTilesParent || degpegVideoTilesParent.childElementCount <= 2)
-  ) {
-    if (stopScreenShareBtn.style.display != "none") {
-      await offShareScreen();
-    }
+  if (localStorage.getItem("call-type") == "pre-recorded") {
+    clearTimeout(callWaitingTimerId);
     await endMeeting(degpegMeetingId, degpegAuthToken);
-    if (!callEndedDiv) {
-      showCallEndedHTML();
-    }
-    if (assistFullCard) {
-      assistFullCard.style.display = "none";
-    }
+    handleCallEnd();
   } else {
-    if (stopScreenShareBtn.style.display != "none") {
-      await offShareScreen();
+    clearTimeout(callWaitingTimerId);
+
+    if (degpegMeetingDropped) return;
+
+
+    const degpegVideoTilesParent = document.getElementById("video-tiles");
+    var callEndedDiv = document.getElementById("degpeg-onetoone-thankyou");
+    var assistFullCard = document.getElementById("assistFullCard");
+    var stopScreenShareBtn = document.getElementById("stop-screenshare");
+    const downloadLink = document.getElementById("recording-url");
+
+    if (downloadLink && degpegDownload === false) {
+      downloadLink.click();
+      degpegDownload = true;
     }
-    await leaveMeeting();
-    if (!callEndedDiv) {
-      showCallEndedHTML();
+
+    if (
+      degpegMeetingId &&
+      (!degpegVideoTilesParent || degpegVideoTilesParent.childElementCount <= 2)
+    ) {
+      if (stopScreenShareBtn.style.display != "none") {
+        await offShareScreen();
+      }
+      await endMeeting(degpegMeetingId, degpegAuthToken);
+      if (!callEndedDiv) {
+        handleCallEnd();
+      }
+      if (assistFullCard) {
+        assistFullCard.style.display = "none";
+      }
+    } else {
+      if (stopScreenShareBtn.style.display != "none") {
+        await offShareScreen();
+      }
+      await leaveMeeting();
+      if (!callEndedDiv) {
+        handleCallEnd();
+      }
+      if (assistFullCard) {
+        assistFullCard.style.display = "none";
+      }
     }
-    if (assistFullCard) {
-      assistFullCard.style.display = "none";
-    }
+
+    degpegMeetingDropped = true;
   }
-
-  degpegMeetingDropped = true;
-
 }
 
 function onShareScreen() {
@@ -1048,118 +1151,171 @@ async function copyUrl() {
 }
 
 async function getAllVideos(degpegVideoTilesParent) {
-  const connectingCallCard = document.getElementById("connectingCallCard");
-  const videoHostDiv = document.getElementById("host-video");
+    const observerCallType = localStorage.getItem("call-type");
+    const connectingCallCard = document.getElementById("connectingCallCard");
+    const videoHostDiv = document.getElementById("host-video");
 
-  var multicallDiv = degpegVideoTilesParent.parentElement;
+    var multicallDiv = degpegVideoTilesParent.parentElement;
 
-  degpegVideoTilesParent.style.height = "100%";
-  degpegVideoTilesParent.style.overflow = "hidden";
+    degpegVideoTilesParent.style.height = "100%";
+    degpegVideoTilesParent.style.overflow = "hidden";
 
-  const observerCallback = async (mutationsList, observer) => {
-    for (const mutation of mutationsList) {
-      if (mutation.type === "childList") {
-        var numberOfVideos = degpegVideoTilesParent.childElementCount;
-        var videoTilesChildren = degpegVideoTilesParent.children;
+    const observerCallback = async (mutationsList, observer) => {
+      for (const mutation of mutationsList) {
+        if (mutation.type === "childList") {
+          var numberOfVideos = degpegVideoTilesParent.childElementCount;
+          var videoTilesChildren = degpegVideoTilesParent.children;
 
-        if (mutation.removedNodes.length > 0 && numberOfVideos === 0) {
-          dropMeeting();
-        }
-
-        if (mutation.removedNodes.length === 0) {
-          if (numberOfVideos === 1 || videoTilesChildren[0]) {
-            var hostVideo = videoTilesChildren[0];
-            if (hostVideo) {
-              hostVideo.classList.remove("degpegVideoCallVideoHost", "movable");
-              hostVideo.classList.add("degpegVideoCallVideoGuest");
-              hostVideo.style.height = "100%";
-            }
-
-            if (connectingCallCard) connectingCallCard.style.display = "block";
-            if (videoHostDiv) videoHostDiv.style.display = "none";
-          }
-        }
-
-        if (numberOfVideos >= 2) {
-          clearTimeout(callWaitingTimerId);
-
-          if (videoTilesChildren[0]) {
-            var hostVideo = videoTilesChildren[0];
-            if (hostVideo) {
-              hostVideo.classList.remove("degpegVideoCallVideoGuest");
-              hostVideo.classList.add("degpegVideoCallVideoHost", "movable");
-              hostVideo.style.objectFit = "cover";
-              hostVideo.style.height = "";
+          if (mutation.removedNodes.length > 0) {
+            if (observerCallType && observerCallType == "video" && numberOfVideos === 0) {
+              dropMeeting();
+            } else if (observerCallType && observerCallType == "audio" && numberOfVideos === 2) {
+              dropMeeting();
             }
           }
 
-          if (connectingCallCard) {
-            connectingCallCard.style.display = "none";
-            document.getElementById("vc-action-btn").style.display = "";
-          }
-          if (videoHostDiv) videoHostDiv.style.display = "";
-        }
+          if (mutation.removedNodes.length === 0) {
+            if (numberOfVideos === 1 || videoTilesChildren[0]) {
+              var hostVideo = videoTilesChildren[0];
+              if (hostVideo) {
+                hostVideo.classList.remove("degpegVideoCallVideoHost", "movable");
+                hostVideo.classList.add("degpegVideoCallVideoGuest");
+                hostVideo.style.height = "100%";
+              }
 
-        for (let i = 1; i < numberOfVideos; i++) {
-          if (videoTilesChildren[i]) {
-            videoTilesChildren[i].classList.add("degpegVideoCallVideoGuest");
-
-            if (numberOfVideos < 3) {
-              videoTilesChildren[i].style.height = "100%";
+              if (connectingCallCard) connectingCallCard.style.display = "block";
+              if (videoHostDiv) videoHostDiv.style.display = "none";
             }
           }
-          if (numberOfVideos === 3) {
-            videoTilesChildren[i].style.height = "";
-            degpegVideoTilesParent.classList.add(
-              "oneToOneDegpegMultiCall",
-              "fullwidth",
-              "halfHeight"
-            );
-            degpegVideoTilesParent.classList.remove("threerowheight");
-          } else if (numberOfVideos > 3 && numberOfVideos < 6) {
-            videoTilesChildren[i].style.height = "";
-            multicallDiv.classList.remove("fullwidth");
-            degpegVideoTilesParent.classList.add(
-              "oneToOneDegpegMultiCall",
-              "halfHeight"
-            );
-            degpegVideoTilesParent.classList.remove("fullwidth", "threerowheight");
-          } else if (numberOfVideos >= 6) {
-            videoTilesChildren[i].style.height = "";
-            multicallDiv.classList.remove("fullwidth");
-            degpegVideoTilesParent.classList.add(
-              "oneToOneDegpegMultiCall",
-              "threerowheight"
-            );
-            degpegVideoTilesParent.classList.remove("fullwidth", "halfHeight");
-          } else {
-            multicallDiv.classList.add("fullwidth");
-            degpegVideoTilesParent.classList.remove(
-              "oneToOneDegpegMultiCall",
-              "fullwidth",
-              "halfHeight",
-              "threerowheight"
-            );
+
+          if (numberOfVideos >= 2) {
+            clearTimeout(callWaitingTimerId);
+
+            if (videoTilesChildren[0]) {
+              var hostVideo = videoTilesChildren[0];
+              if (hostVideo) {
+                hostVideo.classList.remove("degpegVideoCallVideoGuest");
+                hostVideo.classList.add("degpegVideoCallVideoHost", "movable");
+                hostVideo.style.objectFit = "cover";
+                hostVideo.style.height = "";
+              }
+            }
+
+            if (connectingCallCard) {
+              connectingCallCard.style.display = "none";
+              document.getElementById("vc-action-btn").style.display = "";
+            }
+
+            if (videoHostDiv && observerCallType == "video") videoHostDiv.style.display = "";
+
+            if (observerCallType == "audio" && videoTilesChildren[1]) {
+              videoTilesChildren[1].style = "display: none !important";
+            }
+          }
+
+          for (let i = 1; i < numberOfVideos; i++) {
+            if (videoTilesChildren[i]) {
+              videoTilesChildren[i].classList.add("degpegVideoCallVideoGuest");
+
+              if (observerCallType == "video") {
+                if (numberOfVideos < 3) {
+                  videoTilesChildren[i].style.height = "100%";
+                }
+              } else if (observerCallType == "audio") {
+                if (numberOfVideos < 4) {
+                  videoTilesChildren[i].style.height = "100%";
+                }
+              }
+            }
+
+            if (observerCallType == "video") {
+              if (numberOfVideos === 3) {
+                videoTilesChildren[i].style.height = "";
+                degpegVideoTilesParent.classList.add(
+                  "oneToOneDegpegMultiCall",
+                  "fullwidth",
+                  "halfHeight"
+                );
+                degpegVideoTilesParent.classList.remove("threerowheight");
+              } else if (numberOfVideos > 3 && numberOfVideos < 6) {
+                videoTilesChildren[i].style.height = "";
+                multicallDiv.classList.remove("fullwidth");
+                degpegVideoTilesParent.classList.add(
+                  "oneToOneDegpegMultiCall",
+                  "halfHeight"
+                );
+                degpegVideoTilesParent.classList.remove("fullwidth", "threerowheight");
+              } else if (numberOfVideos >= 6) {
+                videoTilesChildren[i].style.height = "";
+                multicallDiv.classList.remove("fullwidth");
+                degpegVideoTilesParent.classList.add(
+                  "oneToOneDegpegMultiCall",
+                  "threerowheight"
+                );
+                degpegVideoTilesParent.classList.remove("fullwidth", "halfHeight");
+              } else {
+                multicallDiv.classList.add("fullwidth");
+                degpegVideoTilesParent.classList.remove(
+                  "oneToOneDegpegMultiCall",
+                  "fullwidth",
+                  "halfHeight",
+                  "threerowheight"
+                );
+              }
+            } else if (observerCallType == "audio") {
+              if (numberOfVideos === 4) {
+                videoTilesChildren[i].style.height = "";
+                degpegVideoTilesParent.classList.add(
+                  "oneToOneDegpegMultiCall",
+                  "fullwidth",
+                  "halfHeight"
+                );
+                degpegVideoTilesParent.classList.remove("threerowheight");
+              } else if (numberOfVideos > 4 && numberOfVideos < 7) {
+                videoTilesChildren[i].style.height = "";
+                multicallDiv.classList.remove("fullwidth");
+                degpegVideoTilesParent.classList.add(
+                  "oneToOneDegpegMultiCall",
+                  "halfHeight"
+                );
+                degpegVideoTilesParent.classList.remove("fullwidth", "threerowheight");
+              } else if (numberOfVideos >= 7) {
+                videoTilesChildren[i].style.height = "";
+                multicallDiv.classList.remove("fullwidth");
+                degpegVideoTilesParent.classList.add(
+                  "oneToOneDegpegMultiCall",
+                  "threerowheight"
+                );
+                degpegVideoTilesParent.classList.remove("fullwidth", "halfHeight");
+              } else {
+                multicallDiv.classList.add("fullwidth");
+                degpegVideoTilesParent.classList.remove(
+                  "oneToOneDegpegMultiCall",
+                  "fullwidth",
+                  "halfHeight",
+                  "threerowheight"
+                );
+              }
+            }
           }
         }
       }
+    };
+
+    const observer = new MutationObserver(observerCallback);
+
+    const config = {
+      attributes: false,
+      childList: true,
+      subtree: false,
+      characterData: false,
+    };
+
+    if (degpegVideoTilesParent) {
+      observer.observe(degpegVideoTilesParent, config);
+    } else {
+      console.error("Target node not found.");
     }
-  };
-
-  const observer = new MutationObserver(observerCallback);
-
-  const config = {
-    attributes: false,
-    childList: true,
-    subtree: false,
-    characterData: false,
-  };
-
-  if (degpegVideoTilesParent) {
-    observer.observe(degpegVideoTilesParent, config);
-  } else {
-    console.error("Target node not found.");
-  }
 }
 
 function clickSnapshot() {
@@ -1222,6 +1378,7 @@ async function uploadFile() {
 
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("contentProviderId", contentProviderId);
 
   if (!degpegAuthToken) {
     degpegAuthToken = await getToken();
@@ -1244,6 +1401,7 @@ async function uploadFile() {
     if (result.response) {
       const message = "File Uploaded Successfully!";
       const type = "success";
+      console.log(result.response);
 
       degpegClosePopup("fileUploadWrapper");
       showNotification(message, type);
@@ -1255,6 +1413,78 @@ async function uploadFile() {
 
     degpegClosePopup("fileUploadWrapper");
     showNotification(message, type);
+  }
+}
+
+async function showCallRecorderHtml() {
+  try {
+    const response = await fetch(htmlAssetUrl + "/showCallRecorder.html");
+    const callEndHTML = await response.text();
+
+    const targetDiv = document.querySelector("#degpeg-onetoone-recording");
+    if (targetDiv) {
+      targetDiv.insertAdjacentHTML("afterend", callEndHTML);
+      targetDiv.style.display = "none";
+    } else {
+      console.error("Target div not found to insert assist card");
+    }
+  } catch (error) {
+    console.error("Error fetching the full assist card HTML:", error);
+  }
+}
+
+async function setUpOfflineRecording() {
+  localStorage.setItem("call-type", "pre-recorded");
+  degpegIntervalStatus = true;
+  const previousVideoCall = document.getElementById("callConnected");
+  previousVideoCall.remove();
+
+  let degpegOfflineMeetingId = await getMeetingId();
+  await joinMeeting(degpegOfflineMeetingId, generateId(), "video", degpegAuthToken);
+  await showCallRecorderHtml();
+}
+
+async function handlePrerecordedMessage(degpegVideoTilesParent) {
+  const videoHostDiv = document.getElementById("host-video");
+
+  degpegVideoTilesParent.style.height = "100%";
+  degpegVideoTilesParent.style.overflow = "hidden";
+
+  const observerCallback = async (mutationsList, observer) => {
+    for (const mutation of mutationsList) {
+      if (mutation.type === "childList") {
+        var numberOfVideos = degpegVideoTilesParent.childElementCount;
+        var videoTilesChildren = degpegVideoTilesParent.children;
+
+        if (mutation.removedNodes.length === 0) {
+          if (numberOfVideos === 1 || videoTilesChildren[0]) {
+            var hostVideo = videoTilesChildren[0];
+            if (hostVideo) {
+              hostVideo.classList.add("degpegVideoCallVideoGuest");
+              hostVideo.style.height = "100%";
+            }
+
+            if (videoHostDiv) videoHostDiv.style.display = "none";
+            document.getElementById("vc-action-btn").style.display = "";
+          }
+        }
+      }
+    }
+  }
+
+  const observer = new MutationObserver(observerCallback);
+
+  const config = {
+    attributes: false,
+    childList: true,
+    subtree: false,
+    characterData: false,
+  };
+
+  if (degpegVideoTilesParent) {
+    observer.observe(degpegVideoTilesParent, config);
+  } else {
+    console.error("Target node not found.");
   }
 }
 
@@ -1349,9 +1579,9 @@ function callWaitingTimer(minutes) {
 
   callWaitingTimerId = setTimeout(() => {
     const videoTiles = document.getElementById("video-tiles");
-    if (videoTiles && videoTiles.childElementCount < 2 && localStorage.getItem("call-type") == "video") {
-      showBusyExecutives();
-      endMeeting(degpegMeetingId, degpegAuthToken);
+    if (videoTiles && videoTiles.childElementCount == 0) {
+      localStorage.setItem("exec-busy", "true");
+      dropMeeting();
     } else {
       clearTimeout(callWaitingTimerId);
     }
@@ -1399,13 +1629,19 @@ const startDivCheckInterval = () => {
 
 const checkDivLoaded = () => {
   const degpegVideoTilesParent = document.getElementById("video-tiles");
-  if (degpegVideoTilesParent) {
-    console.log("Video Call Waiting: ", callSettingsData.videoCallWaitingTime);
-    if (callSettingsData.videoCallWaitingTime) {
-      callWaitingTimer(callSettingsData.videoCallWaitingTime);
+  if (localStorage.getItem("call-type") == "video" || localStorage.getItem("call-type") == "audio") {
+    if (degpegVideoTilesParent) {
+      if (callSettingsData.videoCallWaitingTime) {
+        callWaitingTimer(callSettingsData.videoCallWaitingTime);
+      }
+      degpegIntervalStatus = false;
+      getAllVideos(degpegVideoTilesParent);
     }
-    degpegIntervalStatus = false;
-    getAllVideos(degpegVideoTilesParent);
+  } else {
+    if (degpegVideoTilesParent) {
+      degpegIntervalStatus = false;
+      handlePrerecordedMessage(degpegVideoTilesParent);
+    }
   }
 };
 

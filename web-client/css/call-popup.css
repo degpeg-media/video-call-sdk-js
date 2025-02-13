@@ -1936,3 +1936,60 @@ html {
   opacity: 1;
   bottom: 50px;
 }
+
+#chat-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.message {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.avatar {
+  margin-top: 12px !important;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+.message-container {
+  display: flex;
+  flex-direction: column;
+  max-width: 300px;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.user-name {
+  font-weight: bold;
+  font-size: 14px;
+  color: #000;
+}
+
+.timestamp {
+  font-size: 12px !important;
+  background-color: white !important;
+}
+
+.chat-message {
+  background-color: #e4e6eb;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: #000;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0px !important;
+}
